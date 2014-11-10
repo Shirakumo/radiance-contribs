@@ -186,3 +186,7 @@
           (list
            (looper for (field . value) in data))))
       T)))
+
+(defmacro db:with-transaction (() &body body)
+  `(postmodern:with-transaction ()
+     ,@body))

@@ -171,3 +171,7 @@
           (list
            (looper for (field . value) in data))))
       T)))
+
+(defmacro db:with-transaction (() &body body)
+  `(sqlite:with-transaction *current-con*
+     ,@body))
