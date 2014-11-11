@@ -88,15 +88,4 @@
        (plump:parse (template "dispatchers.ctml"))
        :error error
        :info info
-       :dispatchers (list-uri-dispatchers))))
-
-  (admin:define-panel sessions admin (:access (radiance admin sessions) :icon "fa-tags" :tooltip "Oversee active sessions.")
-    (with-actions (error info)
-        ((:end
-          (dolist (id (or (post-var "selected[]") (list (post-var "id"))))
-            (session:end (session:get id)))
-          (setf info "Sessions ended.")))
-      (r-clip:process
-       (plump:parse (template "sessions.ctml"))
-       :error error :info info
-       :sessions (session:list)))))
+       :dispatchers (list-uri-dispatchers)))))
