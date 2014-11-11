@@ -44,14 +44,18 @@
   (bt:condition-notify *pool-available-condition*))
 
 (defmacro with-connection (&body body)
-  `(let* ((*current-con* (acquire-connection))
-          (postmodern:*database* *current-con*))
-     (unless (postmodern:connected-p *current-con*)
-       (postmodern:reconnect *current-con*))
-     (unwind-protect
-          (progn
-            ,@body)
-       (release-connection *current-con*))))
+  (let ((bodyfunc (gensym "BODY")))
+    `(flet ((,bodyfunc ()
+              ,@body))
+       (if (boundp '*current-con*)
+           (,bodyfunc)
+           (let* ((*current-con* (acquire-connection))
+                  (postmodern:*database* *current-con*))
+             (unless (postmodern:connected-p *current-con*)
+               (postmodern:reconnect *current-con*))
+             (unwind-protect
+                  (,bodyfunc)
+               (release-connection *current-con*)))))))
 
 (defun db:connect (database-name)
   (with-simple-restart (skip "Skip connecting.")
