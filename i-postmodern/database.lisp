@@ -188,5 +188,6 @@
       T)))
 
 (defmacro db:with-transaction (() &body body)
-  `(postmodern:with-transaction ()
-     ,@body))
+  `(with-connection
+     (postmodern:with-transaction ()
+       ,@body)))
