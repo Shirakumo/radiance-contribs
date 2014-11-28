@@ -82,7 +82,7 @@
         `(setf (profile:panel ,name)
                (clip:make-clipboard
                 :name ,name
-                :access ',access
+                :access ,access
                 :function
                 #'(lambda (,user)
                     (declare (ignorable ,user))

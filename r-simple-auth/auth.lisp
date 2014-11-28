@@ -108,7 +108,7 @@
 
 (user:add-default-permission '(auth change-password))
 (define-implement-hook admin
-  (admin:define-panel password settings (:access (auth change-password) :lquery (template "settings.ctml") :icon "fa-key" :tooltip "Change your login password.")
+  (admin:define-panel password settings (:access (perm auth change-password) :lquery (template "settings.ctml") :icon "fa-key" :tooltip "Change your login password.")
     (let ((info) (error)
           (user (auth:current)))
       (handler-case

@@ -91,7 +91,7 @@
                 :url ,(format NIL "/~a/~a" category name)
                 :icon ,icon
                 :tooltip ,tooltip
-                :access ',access
+                :access ,access
                 :function
                 #'(lambda ()
                     ,@body)))))))
