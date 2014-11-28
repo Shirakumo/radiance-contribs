@@ -31,7 +31,7 @@
          (user:username user))))
 
 (defun profile:page (user &optional (panel :profile))
-  (declare (ignore user page-type))
+  (declare (ignore user panel))
   "")
 
 (defun profile:fields ()
