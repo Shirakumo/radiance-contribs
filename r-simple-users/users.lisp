@@ -23,7 +23,7 @@
   ((username :initarg :username :initform (error "USERNAME required.") :accessor username)
    (id :initarg :id :initform (error "ID required.") :accessor id)
    (fields :initarg :fields :initform (make-hash-table :test 'equalp) :accessor fields)
-   (permissions :initarg :permissions :initform () :accessor permissions)
+   (perms :initarg :perms :initform () :accessor perms)
    (modified :initarg :modified :initform () :accessor modified)))
 
 (defmethod print-object ((user user) stream)
@@ -32,7 +32,7 @@
 
 (defmethod initialize-instance :after ((user user) &key)
   (dolist (branch *default-permissions*)
-    (push branch (permissions user)))
+    (push branch (perms user)))
   (save-perms user)
   (setf (gethash (username user) *user-cache*) user))
 
@@ -98,13 +98,13 @@
     (db:remove 'simple-users (db:query (:= '_id (id user))))
     (setf (fields user) NIL
           (id user) NIL
-          (permissions user) NIL
+          (perms user) NIL
           (modified user) NIL)
     user))
 
 (defun save-perms (user)
   (db:update 'simple-users (db:query (:= '_id (id user)))
-             `((permissions . ,(format NIL "~{~{~a~^.~}~^~%~}" (permissions user))))))
+             `((permissions . ,(format NIL "~{~{~a~^.~}~^~%~}" (perms user))))))
 
 (defun ensure-branch (branch)
   (etypecase branch
@@ -125,14 +125,14 @@
   (let ((user (ensure-user user))
         (branch (ensure-branch branch)))
     (or (not branch)
-        (loop for perm in (permissions user)
+        (loop for perm in (perms user)
                 thereis (branch-matches perm branch)))))
 
 (defun user:grant (user branch)
   (let ((user (ensure-user user))
         (branch (ensure-branch branch)))
     (l:debug :users "Granting ~s to ~a." branch user)
-    (pushnew branch (permissions user) :test #'branch-equal)
+    (pushnew branch (perms user) :test #'branch-equal)
     (save-perms user)
     user))
 
@@ -140,8 +140,8 @@
   (let ((user (ensure-user user))
         (branch (ensure-branch branch)))
     (l:debug :users "Prohibiting ~s from ~a." branch user)
-    (setf (permissions user)
-          (remove-if #'(lambda (perm) (branch-matches perm branch)) (permissions user)))
+    (setf (perms user)
+          (remove-if #'(lambda (perm) (branch-matches perm branch)) (perms user)))
     (save-perms user)
     user))
 
@@ -167,8 +167,8 @@
   (with-model model ('simple-users (db:query (:= 'username username)))
     (let ((user (make-instance 'user
                                :id (dm:id model) :username (dm:field model "username")
-                               :permissions (mapcar #'(lambda (b) (cl-ppcre:split "\\." b))
-                                                    (cl-ppcre:split "\\n" (dm:field model "permissions"))))))
+                               :perms (mapcar #'(lambda (b) (cl-ppcre:split "\\." b))
+                                              (cl-ppcre:split "\\n" (dm:field model "permissions"))))))
       (dolist (entry (dm:get 'simple-users-fields (db:query (:= 'uid (dm:id model)))))
         (let ((field (dm:field entry "field"))
               (value (dm:field entry "value")))
@@ -184,8 +184,8 @@
       (setf (gethash (dm:id model) idtable)
             (make-instance 'user
                            :id (dm:id model) :username (dm:field model "username")
-                           :permissions (mapcar #'(lambda (b) (cl-ppcre:split "\\." b))
-                                                (cl-ppcre:split "\\n" (dm:field model "permissions"))))))
+                           :perms (mapcar #'(lambda (b) (cl-ppcre:split "\\." b))
+                                          (cl-ppcre:split "\\n" (dm:field model "permissions"))))))
     ;; sync fields
     (dolist (entry (dm:get 'simple-users-fields (db:query :all)))
       (let ((field (dm:field entry "field"))
