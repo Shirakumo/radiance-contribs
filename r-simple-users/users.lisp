@@ -39,7 +39,7 @@
 (defun ensure-user (thing)
   (etypecase thing
     (user:user thing)
-    (string (user:get thing))))
+    (string (user:get thing :if-does-not-exist :error))))
 
 (defun user:list ()
   (loop for user being the hash-values of *user-cache*
