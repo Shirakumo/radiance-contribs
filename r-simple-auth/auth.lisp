@@ -59,7 +59,7 @@
            (auth:associate user)
            (if redirect
                (redirect (or (session:field *session* 'landing-page) "/"))
-               (list :login "Successful")))
+               (api-output "Login successful.")))
           (T
            (err "Invalid username or password.")))))))
 
