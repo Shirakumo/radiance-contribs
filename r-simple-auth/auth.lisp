@@ -63,6 +63,12 @@
           (T
            (err "Invalid username or password.")))))))
 
+(define-api simple-auth/logout () ()
+  (if (auth:current)
+      (progn (session:end *session*)
+             (api-output "Logged out."))
+      (error 'api-error :message "You are not logged in.")))
+
 (define-page login #@"auth/^login" (:lquery (template "login.ctml"))
   (r-clip:process
    T
