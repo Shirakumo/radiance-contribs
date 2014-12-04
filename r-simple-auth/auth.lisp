@@ -45,7 +45,7 @@
              (redirect
               (redirect (format NIL "~a?msg=~a" (referer *request*) message))
               (return-from simple-auth/login ""))
-             (T (error message)))))
+             (T (error 'api-error :message message)))))
     (when (auth:current)
       (err "Already logged in."))
     (let ((user (user:get username)))
