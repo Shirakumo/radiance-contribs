@@ -7,7 +7,8 @@
 (in-package #:modularize-user)
 (define-module #:simple-profile
   (:use #:cl #:radiance)
-  (:implements #:profile))
+  (:implements #:profile)
+  (:domain "user"))
 (in-package #:simple-profile)
 
 (define-trigger db:connected ()

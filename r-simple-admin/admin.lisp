@@ -7,7 +7,8 @@
 (in-package #:modularize-user)
 (define-module #:simple-admin
   (:use #:cl #:radiance)
-  (:implements #:admin))
+  (:implements #:admin)
+  (:domain "admin"))
 (in-package #:simple-admin)
 
 (defvar *categories* (make-hash-table :test 'equalp))

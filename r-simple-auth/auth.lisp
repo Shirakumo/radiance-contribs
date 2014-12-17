@@ -7,7 +7,8 @@
 (in-package #:modularize-user)
 (define-module simple-auth
   (:use #:cl #:radiance)
-  (:implements #:auth))
+  (:implements #:auth)
+  (:domain "auth"))
 (in-package #:simple-auth)
 
 ;; Out to config at some point
