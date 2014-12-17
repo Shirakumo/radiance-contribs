@@ -5,7 +5,7 @@
 |#
 
 (in-package #:modularize-user)
-(define-module r-clip
+(define-module #:r-clip
   (:use #:cl #:radiance)
   (:export #:process #:lquery-wrapper))
 (in-package #:r-clip)
@@ -48,6 +48,29 @@
 (define-implement-hook profile
   (profile:define-panel-option lquery (name body template)
     (transform-body body template)))
+
+(defun process-pattern (value node attribute)
+  (when (< 0 (length value))
+    (let ((args ()))
+      (flet ((parse (value)
+               (cond ((char= (aref value 0) #\()
+                      (let ((read (read-from-string value)))
+                        (setf args (rest read))
+                        (first read)))
+                     (T
+                      (parse-pattern value)))))
+        (setf (plump:attribute node attribute)
+              (uri-to-string (apply #'resolve (parse value) args)))))))
+
+(macrolet ((define-pattern-attribute (name)
+             (let ((symb (intern (concatenate 'string "@" (string name)))))
+               `(clip:define-attribute-processor ,symb (node value)
+                  (plump:remove-attribute node ,(string-downcase symb))
+                  (process-pattern value node ,(string-downcase name))))))
+  (define-pattern-attribute href)
+  (define-pattern-attribute src)
+  (define-pattern-attribute link))
+
 
 (defun date-machine (stamp)
   (when (integerp stamp) (setf stamp (local-time:universal-to-timestamp stamp)))
