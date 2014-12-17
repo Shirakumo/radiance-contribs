@@ -55,7 +55,7 @@
       (flet ((parse (value)
                (cond ((char= (aref value 0) #\()
                       (let ((read (read-from-string value)))
-                        (setf args (rest read))
+                        (setf args (mapcar #'clip:resolve-value (rest read)))
                         (first read)))
                      (T
                       (parse-pattern value)))))
