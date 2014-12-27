@@ -58,7 +58,7 @@
                                    (subseq (wookie:request-resource wk-request) 0
                                            (position #\? (wookie:request-resource wk-request)))
                                    :lenientp T)))))
-      (v:info :test "~a" (path uri))
+      (l:info :test "~a" (path uri))
       (setf (uri request) uri))
     ;; Populate COOKIES
     (merge-hash-tables (cookies request) (wookie:plugin-request-data :cookie wk-request))
