@@ -41,7 +41,7 @@
               finally (return (sort categories #'string< :key #'(lambda (a) (clip:clip a :title)))))))
 
 (defun is-current (url)
-  (string-equal url (format NIL "/~a" (path *request*))))
+  (string-equal url (format NIL "/~a" (path (uri *request*)))))
 
 (defun admin::category (category)
   (gethash (string category) *categories*))
