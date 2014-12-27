@@ -58,7 +58,7 @@
 
 (defun handle-request (request wk-response)
   (l:trace :server "Handle: ~a" request)
-  (let ((response (request request)))
+  (let ((response (execute-request request)))
     (handler-bind ((error #'handle-condition))
       ;; Process attributes
       (maphash #'(lambda (key val) (declare (ignore key)) (set-real-cookie val wk-response)) (cookies response))

@@ -59,9 +59,7 @@
                                            (position #\? (wookie:request-resource wk-request)))
                                    :lenientp T)))))
       (v:info :test "~a" (path uri))
-      (setf (domains request) (domains uri)
-            (port request) (port uri)
-            (path request) (path uri)))
+      (setf (uri request) uri))
     ;; Populate COOKIES
     (merge-hash-tables (cookies request) (wookie:plugin-request-data :cookie wk-request))
     ;; Populate GET
