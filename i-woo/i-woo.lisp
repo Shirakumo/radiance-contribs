@@ -124,16 +124,22 @@
 
 (defun handle-request (env)
   (destructuring-bind (&key raw-body request-method server-name server-port request-uri query-string &allow-other-keys) env
-    (let ((request (make-instance 'request :remote NIL :domain server-name :http-method request-method
-                                           :get-data (parse-get query-string) :post-data (parse-post raw-body)
-                                           :headers (parse-headers env) :cookies (parse-cookies env)
-                                           :path (subseq request-uri 1 (position #\? request-uri)) :port server-port
-                                           :domains (nreverse (cl-ppcre:split "\\." server-name)))))
+    (let* ((uri (make-instance 'uri :path (subseq request-uri 1 (position #\? request-uri))
+                                    :port server-port
+                                    :domains (nreverse (cl-ppcre:split "\\." server-name))))
+           (request (make-instance 'request :uri uri
+                                            :remote NIL
+                                            :domain server-name
+                                            :http-method request-method
+                                            :get-data (parse-get query-string)
+                                            :post-data (parse-post raw-body)
+                                            :headers (parse-headers env)
+                                            :cookies (parse-cookies env))))
       ;; Cut domain
       (loop for domain being the hash-keys of *url-rewriters*
             for rewriter being the hash-values of *url-rewriters*
             when (funcall rewriter request)
             do (return (setf (domain request) domain)))
       ;; Go
-      (let ((response (request request)))
+      (let ((response (execute-request request)))
         (transform-response request response)))))
