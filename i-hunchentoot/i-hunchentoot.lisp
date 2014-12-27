@@ -87,9 +87,9 @@
 
 (defun pre-handler (request)
   (let ((host (format NIL "~a~a"
-                      (hunchentoot:host ht-request)
+                      (hunchentoot:host request)
                       (hunchentoot:url-decode
-                       (hunchentoot:script-name ht-request)
+                       (hunchentoot:script-name request)
                        *default-external-format*))))
     #+sbcl (setf (sb-thread:thread-name (bt:current-thread)) host)
     (let ((response (request (parse-uri host)
