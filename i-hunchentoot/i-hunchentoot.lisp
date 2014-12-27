@@ -11,25 +11,11 @@
 (in-package #:i-hunchentoot)
 
 (defvar *listeners* (make-hash-table :test 'equalp))
-(defvar *url-rewriters* (make-hash-table :test 'equalp))
 
 (defun whenthen (var func)
   (when var (funcall func var)))
 
-(defun compile-url-rewriter (url)
-  (let* ((domains (nreverse (cl-ppcre:split "\\." url)))
-         (len (length domains)))
-    #'(lambda (uri)
-        (and (loop for domain in domains
-                   for compare in (domains uri)
-                   always (string-equal domain compare))
-             (loop repeat len do (pop (domains uri))
-                   finally (return T))))))
-
 (define-trigger server-start ()
-  (loop for domain in (config-tree :server :domains)
-        do (setf (gethash domain *url-rewriters*)
-                 (compile-url-rewriter domain)))
   (loop for config in (config-tree :server :instances)
         do (server:start (gethash :port config)
                          :address (gethash :address config)
@@ -77,35 +63,6 @@
   (loop for name being the hash-keys of *listeners*
         collect name))
 
-(defun populate-table-from-alist (table alist)
-  (loop for (key . val) in alist
-        do (let ((key (string key)))
-             (if (and (< 1 (length key)) (string= key "[]" :start1 (- (length key) 2)))
-                 (push val (gethash key table))
-                 (setf (gethash key table) val))))
-  table)
-
-(defun create-real-request (ht-request)
-  (let* ((uri (parse-uri (format NIL "~a~a"
-                                 (hunchentoot:host ht-request)
-                                 (hunchentoot:url-decode
-                                  (hunchentoot:script-name ht-request)
-                                  *default-external-format*))))
-         (request (make-instance
-                   'request
-                   :uri uri
-                   :http-method (hunchentoot:request-method ht-request)
-                   :remote (hunchentoot:remote-addr ht-request))))
-    (loop for domain being the hash-keys of *url-rewriters*
-          for rewriter being the hash-values of *url-rewriters*
-          when (funcall rewriter request)
-          do (return (setf (domain request) domain)))
-    (populate-table-from-alist (headers request) (hunchentoot:headers-in ht-request))
-    (populate-table-from-alist (post-data request) (hunchentoot:post-parameters ht-request))
-    (populate-table-from-alist (get-data request) (hunchentoot:get-parameters ht-request))
-    (populate-table-from-alist (cookies request) (hunchentoot:cookies-in ht-request))
-    request))
-
 (defun set-real-cookie (cookie)
   (hunchentoot:set-cookie
    (name cookie) :value (value cookie) :expires (expires cookie)
@@ -129,11 +86,19 @@
       (null (error 'request-empty :request request)))))
 
 (defun pre-handler (request)
-  (let ((request (create-real-request request)))
-    #+sbcl (setf (sb-thread:thread-name (bt:current-thread))
-                 (princ-to-string request))
-    (l:trace :server "Pre-process: ~a" request)
-    (let ((response (execute-request request)))
+  (let ((host (format NIL "~a~a"
+                      (hunchentoot:host ht-request)
+                      (hunchentoot:url-decode
+                       (hunchentoot:script-name ht-request)
+                       *default-external-format*))))
+    #+sbcl (setf (sb-thread:thread-name (bt:current-thread)) host)
+    (let ((response (request (parse-uri host)
+                             :http-method (hunchentoot:request-method request)
+                             :headers (hunchentoot:headers-in request)
+                             :post (hunchentoot:post-parameters request)
+                             :get (hunchentoot:get-parameters request)
+                             :cookies (hunchentoot:cookies-in request)
+                             :remote (hunchentoot:remote-addr request))))
       #'(lambda () (post-handler response request)))))
 
 (setf hunchentoot:*dispatch-table* (list #'pre-handler))
