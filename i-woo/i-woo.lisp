@@ -11,22 +11,8 @@
 (in-package #:i-woo)
 
 (defvar *listeners* (make-hash-table :test 'equalp))
-(defvar *url-rewriters* (make-hash-table :test 'equalp))
-
-(defun compile-url-rewriter (url)
-  (let* ((domains (nreverse (cl-ppcre:split "\\." url)))
-         (len (length domains)))
-    #'(lambda (uri)
-        (and (loop for domain in domains
-                   for compare in (domains uri)
-                   always (string-equal domain compare))
-             (loop repeat len do (pop (domains uri))
-                   finally (return T))))))
 
 (define-trigger server-start ()
-  (loop for domain in (config-tree :server :domains)
-        do (setf (gethash domain *url-rewriters*)
-                 (compile-url-rewriter domain)))
   (loop for config in (config-tree :server :instances)
         do (server:start (gethash :port config)
                          :address (gethash :address config))))
@@ -124,22 +110,14 @@
 
 (defun handle-request (env)
   (destructuring-bind (&key raw-body request-method server-name server-port request-uri query-string &allow-other-keys) env
-    (let* ((uri (make-instance 'uri :path (subseq request-uri 1 (position #\? request-uri))
-                                    :port server-port
-                                    :domains (nreverse (cl-ppcre:split "\\." server-name))))
-           (request (make-instance 'request :uri uri
-                                            :remote NIL
-                                            :domain server-name
-                                            :http-method request-method
-                                            :get-data (parse-get query-string)
-                                            :post-data (parse-post raw-body)
-                                            :headers (parse-headers env)
-                                            :cookies (parse-cookies env))))
-      ;; Cut domain
-      (loop for domain being the hash-keys of *url-rewriters*
-            for rewriter being the hash-values of *url-rewriters*
-            when (funcall rewriter request)
-            do (return (setf (domain request) domain)))
-      ;; Go
-      (let ((response (execute-request request)))
-        (transform-response request response)))))
+    (let ((response (request (make-instance 'uri :path (subseq request-uri 1 (position #\? request-uri))
+                                                 :port server-port
+                                                 :domains (nreverse (cl-ppcre:split "\\." server-name)))
+                             :remote NIL
+                             :http-method request-method
+                             :headers (parse-headers env)
+                             :post (parse-post raw-body)
+                             :get (parse-get query-string)
+                             :cookies (parse-cookies env)
+                             :remote "unknown")))
+      (transform-response request response))))
