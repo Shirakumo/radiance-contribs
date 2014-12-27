@@ -86,20 +86,20 @@
   table)
 
 (defun create-real-request (ht-request)
-  (let ((request (parse-uri (format NIL "~a~a"
-                                    (hunchentoot:host ht-request)
-                                    (hunchentoot:url-decode
-                                     (hunchentoot:script-name ht-request)
-                                     *default-external-format*)))))
-    (change-class
-     request 
-     'request
-     :http-method (hunchentoot:request-method ht-request)
-     :remote (hunchentoot:remote-addr ht-request))
+  (let* ((uri (parse-uri (format NIL "~a~a"
+                                 (hunchentoot:host ht-request)
+                                 (hunchentoot:url-decode
+                                  (hunchentoot:script-name ht-request)
+                                  *default-external-format*))))
+         (request (make-instance
+                   'request
+                   :uri uri
+                   :http-method (hunchentoot:request-method ht-request)
+                   :remote (hunchentoot:remote-addr ht-request))))
     (loop for domain being the hash-keys of *url-rewriters*
           for rewriter being the hash-values of *url-rewriters*
           when (funcall rewriter request)
-            do (return (setf (domain request) domain)))
+          do (return (setf (domain request) domain)))
     (populate-table-from-alist (headers request) (hunchentoot:headers-in ht-request))
     (populate-table-from-alist (post-data request) (hunchentoot:post-parameters ht-request))
     (populate-table-from-alist (get-data request) (hunchentoot:get-parameters ht-request))
@@ -133,7 +133,7 @@
     #+sbcl (setf (sb-thread:thread-name (bt:current-thread))
                  (princ-to-string request))
     (l:trace :server "Pre-process: ~a" request)
-    (let ((response (request request)))
+    (let ((response (execute-request request)))
       #'(lambda () (post-handler response request)))))
 
 (setf hunchentoot:*dispatch-table* (list #'pre-handler))
