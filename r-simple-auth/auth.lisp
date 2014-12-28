@@ -24,7 +24,7 @@
 (defun auth:login! (&optional (landing-page (referer *request*)) (session *session*))
   (setf (session:field session 'landing-page)
         (etypecase landing-page
-          (uri (uri-to-string landing-page :print-port T :print-request-domain T))
+          (uri (uri-to-url landing-page :representation :external))
           (string landing-page)))
   (redirect #@"auth/login"))
 
