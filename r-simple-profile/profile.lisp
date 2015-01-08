@@ -111,3 +111,6 @@
          :panel-name (or* panel "index")
          :panel (run-panel (or* panel "index") user))
         (error 'request-not-found :message "No such user."))))
+
+(define-resource-locator user ((module (eql #.*package*)) user &optional tab)
+  (make-uri :domains (list "user") :path (format NIL "~a~@[/~a~]" user tab)))
