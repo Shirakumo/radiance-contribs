@@ -60,7 +60,8 @@
            (auth:associate user)
            (if redirect
                (redirect (or (session:field *session* 'landing-page) "/"))
-               (api-output "Login successful.")))
+               (api-output "Login successful."))
+           (setf (session:field *session* 'landing-page) NIL))
           (T
            (err "Invalid username or password.")))))))
 
@@ -75,10 +76,23 @@
    T
    :user (auth:current)
    :msg (get-var "msg"))
+  (when (post/get "landing-page")
+    (setf (session:field *session* 'landing-page) (post/get "landing-page")))
   (when (auth:current)
     (let ((landing (session:field *session* 'landing-page)))
       (when landing
         (redirect landing)))))
+
+(define-resource-locator page ((module (eql #.*package*)) page &rest args)
+  (cond ((string-equal page "login")
+         (if (first args)
+             (make-uri :domains (list "auth") :path (format NIL "login?landing-page=~a"
+                                                            (urlencode:urlencode
+                                                             (if (string= (first args) "#")
+                                                                 (uri-to-url (uri *request*) :representation :external)
+                                                                 args))))
+             (make-uri :domains (list "auth") :path "login")))
+        (T (call-next-method))))
 
 (define-page logout #@"auth/logout" ()
   (session:end *session*)

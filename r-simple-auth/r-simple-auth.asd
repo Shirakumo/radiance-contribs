@@ -18,4 +18,5 @@
                (:interface :user)
                :r-clip
                :r-ratify
-               :crypto-shortcuts))
+               :crypto-shortcuts
+               :do-urlencode))
