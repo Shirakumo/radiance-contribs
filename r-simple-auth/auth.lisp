@@ -58,10 +58,11 @@
         (cond
           ((string= hash (cryptos:pbkdf2-hash password *salt*))
            (auth:associate user)
-           (if redirect
-               (redirect (or (session:field *session* 'landing-page) "/"))
-               (api-output "Login successful."))
-           (setf (session:field *session* 'landing-page) NIL))
+           (let ((landing (or (session:field *session* 'landing-page) "/")))
+             (setf (session:field *session* 'landing-page) NIL)
+             (if redirect
+                 (redirect landing)
+                 (api-output "Login successful."))))
           (T
            (err "Invalid username or password.")))))))
 
@@ -76,8 +77,11 @@
    T
    :user (auth:current)
    :msg (get-var "msg"))
-  (when (post/get "landing-page")
-    (setf (session:field *session* 'landing-page) (post/get "landing-page")))
+  (when (or* (post/get "landing-page"))
+    (setf (session:field *session* 'landing-page)
+          (if (string= (post/get "landing-page") "REFERER")
+              (referer *request*)
+              (post/get "landing-page"))))
   (when (auth:current)
     (let ((landing (session:field *session* 'landing-page)))
       (when landing
@@ -85,13 +89,19 @@
 
 (define-resource-locator page ((module (eql #.*package*)) page &rest args)
   (cond ((string-equal page "login")
-         (if (first args)
-             (make-uri :domains (list "auth") :path (format NIL "login?landing-page=~a"
-                                                            (urlencode:urlencode
-                                                             (if (string= (first args) "#")
-                                                                 (uri-to-url (uri *request*) :representation :external)
-                                                                 args))))
-             (make-uri :domains (list "auth") :path "login")))
+         (let ((landing (first args)))
+           (make-uri :domains (list "auth")
+                     :path (format NIL "login?landing-page=~a"
+                                   (urlencode:urlencode
+                                    (etypecase landing
+                                      (null "")
+                                      (string
+                                       (if (string= landing "#")
+                                           (if (boundp '*request*)
+                                               (uri-to-url (uri *request*) :representation :external)
+                                               "REFERER")
+                                           args))
+                                      (uri (uri-to-url landing :representation :external))))))))
         (T (call-next-method))))
 
 (define-page logout #@"auth/logout" ()
