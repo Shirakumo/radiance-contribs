@@ -60,7 +60,7 @@
                      (T
                       (parse-pattern value)))))
         (setf (plump:attribute node attribute)
-              (uri-to-string (apply #'resolve (parse value) args)))))))
+              (uri-to-url (apply #'resolve (parse value) args) :representation :external))))))
 
 (macrolet ((define-pattern-attribute (name)
              (let ((symb (intern (concatenate 'string "@" (string name)))))
@@ -69,7 +69,8 @@
                   (process-pattern value node ,(string-downcase name))))))
   (define-pattern-attribute href)
   (define-pattern-attribute src)
-  (define-pattern-attribute link))
+  (define-pattern-attribute link)
+  (define-pattern-attribute action))
 
 
 (defun date-machine (stamp)
