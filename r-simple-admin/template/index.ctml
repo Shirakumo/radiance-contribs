@@ -28,8 +28,12 @@
         </li>
       </ul>
       <form id="manage" action="#" method="get">
-        <button type="submit" name="simple-admin-manage" value="shutdown" title="Shut down the server"><i class="fa fa-power-off"></i></button>
-        <button type="submit" name="simple-admin-manage" value="restart" title="Restart the server"><i class="fa fa-repeat"></i></button>
+        <c:when test="(user:check (auth:current) '(radiance admin shutdown))">
+          <button type="submit" name="simple-admin-manage" value="shutdown" title="Shut down the server"><i class="fa fa-power-off"></i></button>
+        </c:when>
+        <c:when test="(user:check (auth:current) '(radiance admin restart))">
+          <button type="submit" name="simple-admin-manage" value="restart" title="Restart the server"><i class="fa fa-repeat"></i></button>
+        </c:when>
       </form>
     </div>
     <div id="content" lquery="(html content)">

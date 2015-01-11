@@ -115,7 +115,7 @@
      T
      :manage manage
      :categories *prepared-categories*
-     :content (or (when manage
+     :content (or (when (and manage (user:check (auth:current) (perm radiance admin)))
                     (cond ((not action)
                            (plump:parse (template "confirm.ctml")))
                           ((not (string-equal action "yes"))
