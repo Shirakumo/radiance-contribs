@@ -87,7 +87,7 @@
       (when landing
         (redirect landing)))))
 
-(define-resource-locator page ((module (eql #.*package*)) page &rest args)
+(define-resource-locator page (module (eql (load-time-value (interface :auth)))) (page &rest args)
   (cond ((string-equal page "login")
          (let ((landing (first args)))
            (make-uri :domains (list "auth")
