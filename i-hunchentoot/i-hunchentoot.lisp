@@ -35,9 +35,9 @@
                 :access-log-destination NIL
                 :message-log-destination NIL)))
     (if (and ssl-cert ssl-key)
-        (apply #'make-instance 'hunchentoot:ssl-acceptor :persistent-connections-p NIL
+        (apply #'make-instance 'hunchentoot:ssl-acceptor
                :ssl-certificate-file ssl-cert :ssl-privatekey-file ssl-key :ssl-privatekey-password ssl-pass args)
-        (apply #'make-instance 'hunchentoot:easy-acceptor :persistent-connections-p NIL args))))
+        (apply #'make-instance 'hunchentoot:easy-acceptor args))))
 
 (defun server:start (port &key address ssl-cert ssl-key ssl-pass)
   (let ((listener (mklist port address ssl-cert ssl-key ssl-pass))
@@ -64,12 +64,15 @@
         collect name))
 
 (defun set-real-cookie (cookie)
+  (declare (cookie cookie))
+  (declare (optimize (speed 3)))
   (hunchentoot:set-cookie
    (name cookie) :value (value cookie) :expires (expires cookie)
                  :path (path cookie) :domain (domain cookie)
                  :secure (secure cookie) :http-only (http-only cookie)))
 
 (defun post-handler (response request)
+  (declare (optimize (speed 3)))
   (handler-bind
       ((error #'handle-condition))
     (l:trace :server "Post-process: ~a" response)
@@ -86,20 +89,23 @@
       (null (error 'request-empty :request request)))))
 
 (defun pre-handler (request)
-  (let ((host (format NIL "~a~a"
-                      (hunchentoot:host request)
-                      (hunchentoot:url-decode
-                       (hunchentoot:script-name request)
-                       *default-external-format*))))
+  (declare (optimize (speed 3)))
+  (let* ((host (hunchentoot:host request))
+         (colon (position #\: host)))
     #+sbcl (setf (sb-thread:thread-name (bt:current-thread)) host)
-    (let ((response (request (parse-uri host)
-                             :http-method (hunchentoot:request-method request)
-                             :headers (hunchentoot:headers-in request)
-                             :post (hunchentoot:post-parameters request)
-                             :get (hunchentoot:get-parameters request)
-                             :cookies (hunchentoot:cookies-in request)
-                             :remote (hunchentoot:remote-addr request))))
-      #'(lambda () (post-handler response request)))))
+    #'(lambda () (post-handler (request (make-uri
+                                         :domains (nreverse (cl-ppcre:split "\\." (string-downcase host)))
+                                         :port (when colon (parse-integer host :start (1+ colon)))
+                                         :path (hunchentoot:url-decode
+                                                (hunchentoot:script-name request)
+                                                *default-external-format*))
+                                        :http-method (hunchentoot:request-method request)
+                                        :headers (hunchentoot:headers-in request)
+                                        :post (hunchentoot:post-parameters request)
+                                        :get (hunchentoot:get-parameters request)
+                                        :cookies (hunchentoot:cookies-in request)
+                                        :remote (hunchentoot:remote-addr request))
+                               request))))
 
 (setf hunchentoot:*dispatch-table* (list #'pre-handler))
 
