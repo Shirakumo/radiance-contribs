@@ -14,4 +14,5 @@
   :description "Simple direct table-to-object mapping."
   :components ((:file "module")
                (:file "base"))
-  :depends-on ((:interface :database)))
+  :depends-on ((:interface :database)
+               :closer-mop))
