@@ -141,6 +141,9 @@
   
   (mapc #'check-field-validity (fields class))
 
+  (when (listp (collection class))
+    (setf (collection class) (first (collection class))))
+
   (when (eql (collection class) T)
     (setf (collection class) (collection-from-symbol (class-name class))))
 
