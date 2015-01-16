@@ -90,15 +90,18 @@
 
 (defun pre-handler (request)
   (declare (optimize (speed 3)))
-  (let* ((host (hunchentoot:host request))
+  (let* ((host (the string (hunchentoot:host request)))
          (colon (position #\: host)))
     #+sbcl (setf (sb-thread:thread-name (bt:current-thread)) host)
     #'(lambda () (post-handler (request (make-uri
                                          :domains (nreverse (cl-ppcre:split "\\." (string-downcase host)))
                                          :port (when colon (parse-integer host :start (1+ colon)))
-                                         :path (hunchentoot:url-decode
-                                                (hunchentoot:script-name request)
-                                                *default-external-format*))
+                                         ;; Cut off starting slash.
+                                         :path (subseq (the string
+                                                            (hunchentoot:url-decode
+                                                             (hunchentoot:script-name request)
+                                                             *default-external-format*))
+                                                       1))
                                         :http-method (hunchentoot:request-method request)
                                         :headers (hunchentoot:headers-in request)
                                         :post (hunchentoot:post-parameters request)
