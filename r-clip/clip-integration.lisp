@@ -10,11 +10,21 @@
   (:export #:process #:lquery-wrapper))
 (in-package #:r-clip)
 
+(defpackage #:radiance-clip
+  (:use #:cl #:radiance #:clip)
+  (:shadowing-import-from #:radiance #:or*))
+
+(defun radiance-clip::or* (&rest vals)
+  (loop for val in vals
+        thereis (if (stringp val)
+                    (unless (string= val "") val)
+                    val)))
+
 (defmethod clip:clip ((object standard-object) field)
   (field object field))
 
 (defun process (target &rest fields)
-  (let ((*package* (find-package "RADIANCE-USER")))
+  (let ((*package* (find-package "RADIANCE-CLIP")))
     (apply #'clip:process
            (if (eql target T)
                lquery:*lquery-master-document*
