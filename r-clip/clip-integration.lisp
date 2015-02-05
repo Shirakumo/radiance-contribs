@@ -12,7 +12,7 @@
 
 (defpackage #:radiance-clip
   (:use #:cl #:radiance #:clip)
-  (:shadowing-import-from #:radiance #:or*))
+  (:shadow #:or*))
 
 (defun radiance-clip::or* (&rest vals)
   (loop for val in vals
