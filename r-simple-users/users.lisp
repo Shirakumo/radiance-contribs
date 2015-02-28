@@ -41,6 +41,10 @@
     (user:user thing)
     (string (user:get thing :if-does-not-exist :error))))
 
+(defun user:= (a b)
+  (eql (ensure-user a)
+       (ensure-user b)))
+
 (defun user:list ()
   (loop for user being the hash-values of *user-cache*
         collect user))

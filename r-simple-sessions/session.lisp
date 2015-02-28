@@ -45,6 +45,15 @@
            (l:debug :session "Resuming session ~a" session)
            session))))))
 
+(defun ensure-session (session)
+  (etypecase session
+    (session:session session)
+    (string (session:get session))))
+
+(defun session:= (a b)
+  (eql (ensure-session a)
+       (ensure-session b)))
+
 (defun session:start ()
   (let ((cookie (cookie "radiance-session")))
     (or (and cookie (decode-session cookie))
