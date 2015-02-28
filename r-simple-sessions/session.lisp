@@ -31,10 +31,9 @@
   (l:debug :session "Starting session ~a" session)
   (setf (gethash (id session) *session-table*) session)
   (trigger 'session:create session)
-  (when (and (boundp '*request*) (boundp '*response*))
-    (setf (cookie "radiance-session" :domain (domain *request*) :path "/" :timeout (timeout session) :http-only T)
-          ;; Note: Add support for the secure flag through https options in the main framework
-          (make-cookie-value session))))
+  ;; Trigger cookie creation
+  (setf (session:timeout session)
+        (timeout session)))
 
 (defun decode-session (hash)
   (ignore-errors
@@ -82,7 +81,12 @@
   (timeout session))
 
 (defun (setf session:timeout) (seconds session)
-  (setf (timeout session) seconds))
+  (setf (timeout session) seconds)
+  ;; Update cookie
+  (when (and (boundp '*request*) (boundp '*response*))
+    (setf (cookie "radiance-session" :domain (domain *request*) :path "/" :timeout (timeout session) :http-only T)
+          ;; Note: Add support for the secure flag through https options in the main framework
+          (make-cookie-value session))))
 
 (defun session:end (session)
   (setf (timeout session) 0)
