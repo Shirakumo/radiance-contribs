@@ -94,7 +94,8 @@
          (colon (position #\: host)))
     #+sbcl (setf (sb-thread:thread-name (bt:current-thread)) host)
     #'(lambda () (post-handler (request (make-uri
-                                         :domains (nreverse (cl-ppcre:split "\\." (string-downcase host)))
+                                         :domains (nreverse (cl-ppcre:split "\\." (string-downcase host :end colon)
+                                                                            :end (or colon (length host))))
                                          :port (when colon (parse-integer host :start (1+ colon)))
                                          ;; Cut off starting slash.
                                          :path (subseq (the string
