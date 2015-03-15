@@ -25,6 +25,10 @@
 (defun dm:collection (data-model)
   (collection data-model))
 
+(defun dm:fields (data-model)
+  (loop for field being the hash-keys of (fields data-model)
+        collect field))
+
 (defun dm:field (data-model field)
   (gethash (string-downcase field) (fields data-model)))
 
