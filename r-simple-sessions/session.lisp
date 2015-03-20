@@ -13,6 +13,8 @@
 (defvar *session-table* (make-hash-table :test 'equalp))
 (defvar *session-key* (make-random-string))
 (defvar *session-timeout-format* '((:year 4) #\. (:month 2) #\. (:day 2) #\Space (:hour 2) #\: (:min 2) #\: (:sec 2)))
+(defvar *prune-thread* NIL)
+(defvar *prune-interval* (* 60 5))
 
 (defclass session (session:session)
   ((id :initarg :id :initform (princ-to-string (uuid:make-v4-uuid)) :accessor id)
@@ -89,6 +91,7 @@
           (make-cookie-value session))))
 
 (defun session:end (session)
+  (v:debug :session "Ending session ~s" session)
   (setf (timeout session) 0)
   (remhash (id session) *session-table*)
   session)
@@ -97,5 +100,43 @@
   (and (< (get-universal-time) (timeout session))
        session))
 
+(defun session::prune ()
+  (v:info :session "Pruning dead sessions.")
+  (maphash (lambda (uuid session)
+             (unless (session:active-p session)
+               (session:end session)))
+           *session-table*))
+
 (define-trigger request ()
   (setf *session* (session:start)))
+
+(defun session::start-prune-thread ()
+  (when *prune-thread*
+    (error "Prune-thread already running."))
+  (v:info :session "Starting prune thread.")
+  (setf *prune-thread* (cons NIL T))
+  (setf (car *prune-thread*)
+        (bt:make-thread (lambda ()
+                          (loop while (cdr *prune-thread*)
+                                do (sleep *prune-interval*)
+                                   (session::prune)))
+                        :name "Session pruning thread")))
+
+(defun session::stop-prune-thread (&optional force)
+  (unless (or force *prune-thread*) 
+    (error "No prune-thread running."))
+  (v:info :session "Stopping prune thread.")
+  (setf (cdr *prune-thread*) NIL)
+  (cond
+    ((not (car *prune-thread*)))
+    (force
+     (bt:destroy-thread (car *prune-thread*)))
+    (T
+     (bt:join-thread (car *prune-thread*))))
+  (setf *prune-thread* NIL))
+
+(define-trigger radiance:startup ()
+  (session::start-prune-thread))
+
+(define-trigger radiance:shutdown ()
+  (session::stop-prune-thread))

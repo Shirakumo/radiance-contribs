@@ -16,4 +16,5 @@
   :components ((:file "session"))
   :depends-on (:crypto-shortcuts
                :local-time
-               :uuid))
+               :uuid
+               :bordeaux-threads))
