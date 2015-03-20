@@ -18,7 +18,14 @@
   (session:field session 'user))
 
 (defun auth:associate (user &optional (session *session*))
+  (v:info :auth "Associating ~a with ~a and prolonging for ~a"
+          session user auth:*login-timeout*)
   (setf (session:field session 'user) user)
+  (incf (session:timeout session)
+        (case auth:*login-timeout*
+          ((NIL) 0)
+          ((T) (* 60 60 24 365 100))
+          (otherwise auth:*login-timeout*)))
   (trigger 'auth:associate session))
 
 (defun auth:login! (&optional (landing-page (referer *request*)) (session *session*))
