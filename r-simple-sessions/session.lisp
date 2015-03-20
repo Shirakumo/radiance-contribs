@@ -117,21 +117,24 @@
   (setf *prune-thread* (cons NIL T))
   (setf (car *prune-thread*)
         (bt:make-thread (lambda ()
-                          (loop while (cdr *prune-thread*)
-                                do (sleep *prune-interval*)
-                                   (session::prune)))
+                          (catch 'exit
+                            (loop while (cdr *prune-thread*)
+                                  do (sleep *prune-interval*)
+                                     (session::prune))))
                         :name "Session pruning thread")))
 
-(defun session::stop-prune-thread (&optional force)
-  (unless (or force *prune-thread*) 
+(defun session::stop-prune-thread (&key kill)
+  (unless (or kill *prune-thread*) 
     (error "No prune-thread running."))
   (v:info :session "Stopping prune thread.")
   (setf (cdr *prune-thread*) NIL)
   (cond
     ((not (car *prune-thread*)))
-    (force
+    (kill
      (bt:destroy-thread (car *prune-thread*)))
     (T
+     (bt:interrupt-thread (car *prune-thread*)
+                          (lambda () (throw 'exit NIL)))
      (bt:join-thread (car *prune-thread*))))
   (setf *prune-thread* NIL))
 
