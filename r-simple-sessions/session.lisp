@@ -14,7 +14,7 @@
 (defvar *session-key* (make-random-string))
 (defvar *session-timeout-format* '((:year 4) #\. (:month 2) #\. (:day 2) #\Space (:hour 2) #\: (:min 2) #\: (:sec 2)))
 (defvar *prune-thread* NIL)
-(defvar *prune-interval* (* 60 5))
+(defvar *prune-interval* (* 60 60))
 
 (defclass session (session:session)
   ((id :initarg :id :initform (princ-to-string (uuid:make-v4-uuid)) :accessor id)
