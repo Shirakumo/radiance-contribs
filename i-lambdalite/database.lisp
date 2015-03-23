@@ -13,7 +13,7 @@
     (keyword thing)
     (T (intern (string-upcase thing) "KEYWORD"))))
 
-(defun ensure-keyword (thing)
+(defun ensure-field (thing)
   (typecase thing
     (keyword
      (if (char= #\/ (char (symbol-name thing) 0))
@@ -107,7 +107,7 @@
                           (:DESC #'string>))))))
              (funcall sortfunc a b)))
       (dolist (spec specs)
-        (let ((field (ensure-keyword (first spec)))
+        (let ((field (ensure-field (first spec)))
               (order (second spec)))
           (setf list (sort list (lambda (a b)
                                   (sorter (getf a field)
@@ -128,7 +128,7 @@
                 (if fields
                     (dolist (field fields)
                       (setf (gethash (subseq (string field) 1) table)
-                            (getf row (ensure-keyword field))))
+                            (getf row (ensure-field field))))
                     (loop for (field val) on row by #'cddr
                           do (setf (gethash (subseq (string field) 1) table) val)))
                 table)))
@@ -142,12 +142,12 @@
   (length (database:select collection query :fields '(:_id))))
 
 (defun database:insert (collection data)
-  (let ((list (list :/_id (uuid:make-v4-uuid))))
+  (let ((list (list :/_id (princ-to-string (uuid:make-v4-uuid)))))
     (etypecase data
       (hash-table
-       (maphash (lambda (key val) (setf (getf list (ensure-keyword key)) val)) data))
+       (maphash (lambda (key val) (setf (getf list (ensure-field key)) val)) data))
       (list
-       (loop for (key . val) in data do (setf (getf list (ensure-keyword key)) val))))
+       (loop for (key . val) in data do (setf (getf list (ensure-field key)) val))))
     (lambdalite:insert (ensure-collection collection) list)))
 
 (defun database:remove (collection query &key (skip 0) amount sort)
@@ -165,12 +165,12 @@
                   (hash-table
                    (lambda (row)
                      (maphash (lambda (key val)
-                                (setf (getf row (ensure-keyword key)) val))
+                                (setf (getf row (ensure-field key)) val))
                               data)))
                   (list
                    (lambda (row)
                      (loop for (key . val) in data
-                           do (setf (getf row (ensure-keyword key)) val)))))))
+                           do (setf (getf row (ensure-field key)) val)))))))
     (with-table-change (collection rows)
       (prog1 (setf rows (sort-by-specs rows sort))
         (loop for row in rows
@@ -225,6 +225,6 @@
          (:AND `(and ,@(mapcar #'compile-query (cdr form))))
          (:OR `(or ,@(mapcar #'compile-query (cdr form))))
          (:NOT `(not ,(compile-query (second form))))
-         (:FIELD `(getf ,*rowvar* ,(ensure-keyword (second form))))
+         (:FIELD `(getf ,*rowvar* ,(ensure-field (second form))))
          (QUOTE (compile-query `(:FIELD ,(second form))))
          (T form))))))
