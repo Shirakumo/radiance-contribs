@@ -32,7 +32,7 @@
          (user:username user))))
 
 (defun profile:page (user &optional (panel :profile))
-  (resource :user))
+  (resource :user :profile user panel))
 
 (defun profile:fields ()
   (dm:get 'simple-profile-fields (db:query :all)))
@@ -112,4 +112,4 @@
         (error 'request-not-found :message "No such user."))))
 
 (define-resource-locator user:user (module (eql (load-time-value (interface :profile)))) (user &optional tab)
-  (make-uri :domains (list "user") :path (format NIL "~a~@[/~a~]" user tab)))
+  (make-uri :domains (list "user") :path (format NIL "~(~a~)~@[/~(~a~)~]" (user:username user) tab)))
