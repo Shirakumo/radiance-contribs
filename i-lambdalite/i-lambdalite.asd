@@ -15,5 +15,4 @@
   :components ((:file "module")
                (:file "database"))
   :depends-on (:lambdalite
-               :cl-ppcre
-               :uuid))
+               :cl-ppcre))

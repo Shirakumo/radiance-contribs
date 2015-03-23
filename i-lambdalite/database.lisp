@@ -8,6 +8,13 @@
 
 (defvar *schemas* (make-hash-table :test 'eql))
 
+(defun make-row-id ()
+  (lambdalite:with-tx
+    (or (and (lambdalite:update 'rowid (constantly T) (lambda (row) (incf (getf row :/id)) row))
+             (getf (lambdalite:select1 'rowid) :/id))
+        (and (lambdalite:insert 'rowid '(:/id 0))
+             0))))
+
 (defun ensure-collection (thing)
   (typecase thing
     (keyword thing)
@@ -72,7 +79,7 @@
   (not (null lambdalite::*db*)))
 
 (defun database:collections ()
-  (union (lambdalite:list-tables)
+  (union (remove 'rowid (lambdalite:list-tables))
          (loop for name being the hash-keys of *schemas* collect name)))
 
 (defun database:collection-exists-p (collection)
@@ -147,20 +154,23 @@
   (length (database:select collection query :fields '(:_id))))
 
 (defun database:insert (collection data)
-  (let ((list (list :/_id (princ-to-string (uuid:make-v4-uuid)))))
+  (let* ((id (make-row-id))
+         (list (list :/_id id)))
     (etypecase data
       (hash-table
        (maphash (lambda (key val) (setf (getf list (ensure-field key)) val)) data))
       (list
        (loop for (key . val) in data do (setf (getf list (ensure-field key)) val))))
-    (lambdalite:insert (ensure-collection collection) list)))
+    (lambdalite:insert (ensure-collection collection) list)
+    id))
 
 (defun database:remove (collection query &key (skip 0) amount sort)
   (with-table-change (collection rows)
     (let ((i 0))
       (delete-if (lambda (row)
                    (prog1 (and (<= skip i)
-                               (< i (+ skip amount))
+                               (or (not amount)
+                                   (< i (+ skip amount)))
                                (funcall query row))
                      (incf i)))
                  (sort-by-specs rows sort)))))
