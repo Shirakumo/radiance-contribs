@@ -13,6 +13,7 @@
 (defclass data-model (dm:data-model)
   ((collection :initform (error "COLLECTION required.") :initarg :collection :accessor collection)
    (fields :initform (make-hash-table :test 'equalp) :initarg :fields :accessor fields)
+   (field-labels :initform () :initargs :field-labels :accessor field-labels)
    (inserted :initform NIL :initarg :inserted :accessor inserted)))
 
 (defmethod print-object ((model data-model) stream)
@@ -26,8 +27,9 @@
   (collection data-model))
 
 (defun dm:fields (data-model)
-  (loop for field being the hash-keys of (fields data-model)
-        collect field))
+  (or (field-labels data-model)
+      (setf (field-labels data-model)
+            (mapcar #'first (db:structure (dm:collection data-model))))))
 
 (defun dm:field (data-model field)
   (gethash (string-downcase field) (fields data-model)))
