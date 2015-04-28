@@ -31,7 +31,7 @@
                target)
            fields)))
 
-(defmacro lquery-wrapper ((template &optional (content-type "application/xhtml+xml")) &body body)
+(defmacro lquery-wrapper ((template &optional (content-type "application/xhtml+xml; charset=utf-8")) &body body)
   `(let ((lquery:*lquery-master-document* (lquery:load-page (template ,template))))
      ,@body
      (setf (content-type *response*) ,content-type)
@@ -47,7 +47,7 @@
 
 (define-page-option lquery (page uri body template)
   (if template
-      `((setf (content-type *response*) "application/xhtml+xml")
+      `((setf (content-type *response*) "application/xhtml+xml; charset=utf-8")
         ,@(transform-body body template))
       body))
 
