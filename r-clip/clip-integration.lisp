@@ -26,9 +26,11 @@
 (defun process (target &rest fields)
   (let ((*package* (find-package "RADIANCE-CLIP")))
     (apply #'clip:process
-           (if (eql target T)
-               lquery:*lquery-master-document*
-               target)
+           (etypecase target 
+             ((eql T) lquery:*lquery-master-document*)
+             (pathname (plump:parse target))
+             (string (plump:parse target))
+             (plump:node target))
            fields)))
 
 (defmacro lquery-wrapper ((template &optional (content-type "application/xhtml+xml; charset=utf-8")) &body body)
