@@ -13,4 +13,7 @@
   :version "1.0.0"
   :description "Bridging library to enable Woo as a Radiance server."
   :components ((:file "i-woo"))
-  :depends-on (:woo :cl-ppcre))
+  :depends-on (:woo
+               :cl-ppcre
+               :http-body
+               :bordeaux-threads))

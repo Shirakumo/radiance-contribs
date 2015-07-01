@@ -25,7 +25,10 @@
       (error "Server already started on specified port & address!"))
     (l:info :server "Starting listener ~a" name)
     (setf (gethash name *listeners*)
-          (woo:run #'handle-request :port port :address (or address "0.0.0.0")))
+          (bt:make-thread
+           (lambda ()
+             (catch 'stop-server
+               (woo:run #'handle-request :port port :address (or address "0.0.0.0"))))))
     (trigger 'server:started port address)))
 
 (defun server:stop (port &optional address)
@@ -34,7 +37,8 @@
     (cond
       (listener
        (l:info :server "Stopping listener ~a" name)
-       (woo:stop listener)
+       (when (bt:thread-alive-p listener)
+         (bt:interrupt-thread listener (lambda () (throw 'stop-server NIL))))
        (remhash name *listeners*)
        (trigger 'server:stopped port address))
       (T
@@ -60,17 +64,94 @@
                 (vector-push (char-code char) vector))))
     (flexi-streams:octets-to-string vector :external-format :utf-8)))
 
+(defun ends-with (end string)
+  (and (<= (length end) (length string))
+       (string= end string :start2 (- (length string) (length end)))))
+
 (defun parse-get (get)
   (let ((table (make-hash-table :test 'equalp)))
     (loop for pair in (cl-ppcre:split "&" get)
           do (let ((pos (position #\= pair)))
-               (setf (gethash (url-decode (subseq pair 0 pos)) table)
-                     (when pos (url-decode (subseq pair (1+ pos)))))))
+               (when pos
+                 (let ((key (url-decode (subseq pair 0 pos)))
+                       (val (subseq pair (1+ pos))))
+                   (if (ends-with "[]" key)
+                       (push val (gethash key table))
+                       (setf (gethash key table) val))))))
     table))
 
-(defun parse-post (body)
-  ;; TODO, somehow.
-  (make-hash-table :test 'equalp))
+(defun starts-with (start string)
+  (and (<= (length start) (length string))
+       (string= start string :end2 (length start))))
+
+(defun slurp-character-stream (stream)
+  "Quickly slurps the stream's contents into an array with fill pointer."
+  (declare (type stream stream)
+           (optimize speed))
+  (with-output-to-string (string)
+    (let ((buffer (make-array 4096 :element-type 'character)))
+      (loop for bytes = (read-sequence buffer stream)
+            do (write-sequence buffer string :start 0 :end bytes)
+            while (= bytes 4096)))))
+
+(defun handle-stream-to-string (stream)
+  (etypecase stream
+    (flexi-streams::vector-input-stream
+     (babel:octets-to-string (flexi-streams::vector-stream-vector stream)
+                             :start (flexi-streams::vector-stream-index stream)
+                             :end (flexi-streams::vector-stream-end stream)))
+    (flexi-streams:flexi-stream
+     (setf (flexi-streams:flexi-stream-element-type stream) 'character)
+     (slurp-character-stream stream))
+    (stream
+     (let ((type (stream-element-type stream)))
+       (cond ((subtypep type '(unsigned-byte 8))
+              (slurp-character-stream (flexi-streams:make-flexi-stream stream :element-type 'character :external-format :utf-8)))
+             ((subtypep type 'character)
+              (slurp-character-stream stream))
+             (T (error 'internal-error :message (format NIL "Don't know how to handle stream of element-type ~s" type))))))))
+
+(defun handle-stream-to-file (stream)
+  (etypecase stream
+    (flexi-streams:vector-stream
+     ;; Read to temp file.
+     (uiop:with-temporary-file (:stream output
+                                :pathname path
+                                :prefix "radiance-woo-file"
+                                :keep T
+                                :direction :output
+                                :element-type '(unsigned-byte 8))
+       (uiop:copy-stream-to-stream stream output :element-type '(unsigned-byte 8))
+       path))
+    (stream
+     ;; Hopefully already a temp file.
+     (pathname stream))
+    (pathname
+     ;; Convenient.
+     stream)))
+
+(defun parse-post (body type length)
+  (let ((body (http-body:parse type length body)))
+    (cond ((starts-with "multipart/form-data" type)
+           ;; Need to parse standard params into table,
+           ;; file arguments into (PATH ORIGINAL-FILENAME MIME-TYPE)
+           (let ((map (make-hash-table :test 'equalp)))
+             (with-simple-restart (abort "Abort processing more values.")
+               (loop for (key body meta headers) in body
+                     for content-type = (gethash "content-type" headers)
+                     for filename = (gethash "filename" meta)
+                     do (with-simple-restart (skip "Skip processing this value.")
+                          (let ((val (if content-type
+                                         ;; I don't know if this is a good idea.
+                                         (when (string/= filename "")
+                                           (list (handle-stream-to-file body) filename content-type))
+                                         (handle-stream-to-string body))))
+                            (when val
+                              (if (ends-with "[]" key)
+                                  (push val (gethash key map))
+                                  (setf (gethash key map) val)))))))
+             map))
+          (T body))))
 
 (defun parse-headers (env)
   (let ((table (make-hash-table :test 'equalp)))
@@ -108,16 +189,43 @@
           (pathname (data response))
           (null (error 'request-empty :request request)))))
 
+(defun maybe-invoke-restart (restart &optional condition)
+  (let ((restart (find-restart restart condition)))
+    (when restart (invoke-restart restart))))
+
+;; Handle all the things!
 (defun handle-request (env)
-  (destructuring-bind (&key raw-body request-method server-name server-port request-uri query-string &allow-other-keys) env
-    (let ((response (request (make-instance 'uri :path (subseq request-uri 1 (position #\? request-uri))
-                                                 :port server-port
-                                                 :domains (nreverse (cl-ppcre:split "\\." server-name)))
-                             :remote NIL
-                             :http-method request-method
-                             :headers (parse-headers env)
-                             :post (parse-post raw-body)
-                             :get (parse-get query-string)
-                             :cookies (parse-cookies env)
-                             :remote "unknown")))
-      (transform-response request response))))
+  (handler-bind ((error #'handle-condition))
+    (restart-case
+        (destructuring-bind (&key raw-body request-method server-name server-port request-uri query-string content-type content-length &allow-other-keys) env
+          (multiple-value-bind (response request)
+              (handler-bind ((error (lambda (err)
+                                      (maybe-invoke-restart 'skip err)
+                                      (maybe-invoke-restart 'abort err))))
+                (request (make-instance 'uri :path (subseq request-uri 1 (position #\? request-uri))
+                                             :port server-port
+                                             :domains (nreverse (cl-ppcre:split "\\." server-name)))
+                         :remote NIL
+                         :http-method request-method
+                         :headers (parse-headers env)
+                         :post (parse-post raw-body content-type content-length)
+                         :get (parse-get query-string)
+                         :cookies (parse-cookies env)
+                         :remote "unknown"))
+            ;; Clean up temporary files
+            (handler-case
+                (flet ((handle-var (var)
+                         (when (listp var)
+                           (uiop:delete-file-if-exists (first var)))))
+                  (loop for key being the hash-keys of (post-data request)
+                        for val being the hash-values of (post-data request)
+                        do (if (ends-with "[]" key)
+                               (mapcar #'handle-var val)
+                               (handle-var val))))
+              (error (err)
+                (v:severe :server "Error in cleanup: ~a" err)))
+            ;; Present output
+            (transform-response request response)))
+      (abort ()
+        :report "Abort and send back an internal error."
+        (error 'internal-error :message "Oh dear.")))))
