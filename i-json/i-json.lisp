@@ -41,7 +41,7 @@
     (princ-to-string o)))
 
 (define-api-format json (object)
-  (setf (content-type *response*) "application/json")
+  (setf (content-type *response*) "application/json; charset=utf-8")
   (with-output-to-string (stream)
     (cl-json:encode-json (serialize object) stream)))
 
