@@ -71,6 +71,14 @@
                  :path (path cookie) :domain (domain cookie)
                  :secure (secure cookie) :http-only (http-only cookie)))
 
+(defun header-encode (string)
+  (with-output-to-string (out)
+    (loop for octet across (flexi-streams:string-to-octets (or string "") :external-format :utf-8)
+          for char = (code-char octet)
+          do (if (< (char-code char) 128)
+                 (write-char char out)
+                 (format out "%~2,'0x" (char-code char))))))
+
 (defun post-handler (response request)
   (declare (optimize (speed 3)))
   (handler-bind
@@ -80,8 +88,8 @@
     (setf (hunchentoot:return-code*) (return-code response)
           (hunchentoot:content-type*) (content-type response))
     (maphash #'(lambda (key val) (declare (ignore key)) (set-real-cookie val)) (cookies response))
-    (maphash #'(lambda (key val) (setf (hunchentoot:header-out (hunchentoot:url-encode key))
-                                       (hunchentoot:url-encode val))) (headers response))
+    (maphash #'(lambda (key val) (setf (hunchentoot:header-out (header-encode key))
+                                       (header-encode val))) (headers response))
     ;; Process body
     (etypecase (data response)
       (pathname (hunchentoot:handle-static-file (data response) (content-type response)))
