@@ -80,7 +80,8 @@
     (setf (hunchentoot:return-code*) (return-code response)
           (hunchentoot:content-type*) (content-type response))
     (maphash #'(lambda (key val) (declare (ignore key)) (set-real-cookie val)) (cookies response))
-    (maphash #'(lambda (key val) (setf (hunchentoot:header-out key) val)) (headers response))
+    (maphash #'(lambda (key val) (setf (hunchentoot:header-out (hunchentoot:url-encode key))
+                                       (hunchentoot:url-encode val))) (headers response))
     ;; Process body
     (etypecase (data response)
       (pathname (hunchentoot:handle-static-file (data response) (content-type response)))
@@ -112,5 +113,3 @@
                                request))))
 
 (setf hunchentoot:*dispatch-table* (list #'pre-handler))
-
-
