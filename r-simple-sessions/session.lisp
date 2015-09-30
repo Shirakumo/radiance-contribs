@@ -91,7 +91,7 @@
           (make-cookie-value session))))
 
 (defun session:end (session)
-  (v:debug :session "Ending session ~s" session)
+  (l:debug :session "Ending session ~s" session)
   (setf (timeout session) 0)
   (remhash (id session) *session-table*)
   session)
@@ -101,7 +101,7 @@
        session))
 
 (defun session::prune ()
-  (v:info :session "Pruning dead sessions.")
+  (l:info :session "Pruning dead sessions.")
   (maphash (lambda (uuid session)
              (unless (session:active-p session)
                (session:end session)))
@@ -113,7 +113,7 @@
 (defun session::start-prune-thread ()
   (when *prune-thread*
     (error "Prune-thread already running."))
-  (v:info :session "Starting prune thread.")
+  (l:info :session "Starting prune thread.")
   (setf *prune-thread* (cons NIL T))
   (setf (car *prune-thread*)
         (bt:make-thread (lambda ()
@@ -126,7 +126,7 @@
 (defun session::stop-prune-thread (&key kill)
   (unless (or kill *prune-thread*) 
     (error "No prune-thread running."))
-  (v:info :session "Stopping prune thread.")
+  (l:info :session "Stopping prune thread.")
   (setf (cdr *prune-thread*) NIL)
   (cond
     ((not (car *prune-thread*)))
