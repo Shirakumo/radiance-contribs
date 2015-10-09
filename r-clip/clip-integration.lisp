@@ -35,16 +35,18 @@
 
 (defmacro lquery-wrapper ((template &optional (content-type "application/xhtml+xml; charset=utf-8")) &body body)
   `(let ((lquery:*lquery-master-document* (lquery:load-page (template ,template))))
-     ,@body
      (setf (content-type *response*) ,content-type)
-     (lquery:$ (serialize) (node))))
+     (handler-bind ((plump:invalid-xml-character #'abort))
+       ,@body
+       (lquery:$ (serialize) (node)))))
 
 (defun transform-body (body template)
   (if template
       `((let* ((lquery:*lquery-master-document*
                  (lquery:load-page ,template)))
-          ,@body
-          (lquery:$ (serialize) (node))))
+          (handler-bind ((plump:invalid-xml-character #'abort))
+            ,@body
+            (lquery:$ (serialize) (node)))))
       body))
 
 (define-page-option lquery (page uri body template)
