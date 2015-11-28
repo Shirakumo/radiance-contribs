@@ -22,12 +22,13 @@
 (defun session-var (var &optional (session *session*))
   (session:field session var))
 
-(ratify:define-test user (name)
-  (unless (user:get name :if-does-not-exist NIL)
-    (ratify:ratification-error name "No user with name ~a found." name)))
+(ratify:define-test user (name start end)
+  (let ((name (subseq name start end)))
+    (unless (user:get name :if-does-not-exist NIL)
+      (ratify:ratification-error name "No user with name ~a found." name))))
 
-(ratify:define-parser user (name)
-  (user:get name))
+(ratify:define-parser user (name start end)
+  (user:get (subseq name start end)))
 
 (defun verify-nonce (nonce &key (hash (session-var :nonce-hash)) (salt (session-var :nonce-salt)))
   (if (string= hash (cryptos:pbkdf2-hash nonce salt))
