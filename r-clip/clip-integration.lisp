@@ -84,7 +84,8 @@
   (define-pattern-attribute href)
   (define-pattern-attribute src)
   (define-pattern-attribute link)
-  (define-pattern-attribute action))
+  (define-pattern-attribute action)
+  (define-pattern-attribute formaction))
 
 
 (defun date-machine (stamp)
