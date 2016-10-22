@@ -60,7 +60,7 @@
 (defun db:connect (database-name)
   (with-simple-restart (skip "Skip connecting.")
     (flet ((err (msg) (error 'database-connection-failed :database database-name :message msg)))
-      (let ((conn (config-tree :postmodern :connections database-name)))
+      (let ((conn (config :connections database-name)))
         (unless conn (err "No such connection found."))
         (when *current-db*
           (warn 'database-connection-already-open :database database-name)

@@ -7,7 +7,8 @@
 (in-package #:i-sqlite)
 
 (define-trigger startup-done ()
-  (db:connect (config-tree :sqlite :default))
+  (defaulted-config "radiance.db" :connections "radiance")
+  (db:connect (defaulted-config "radiance" :default))
   (load-pcre))
 
 (define-trigger server-stop ()

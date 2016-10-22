@@ -12,7 +12,7 @@
 (defun db:connect (database-name)
   (with-simple-restart (skip "Skip connecting.")
     (flet ((err (msg) (error 'database-connection-failed :database database-name :message msg)))
-      (let ((conn (config-tree :sqlite :connections database-name)))
+      (let ((conn (config :connections database-name)))
         (unless conn (err "No such connection found."))
         (when *current-con*
           (warn 'database-connection-already-open :database database-name)
@@ -21,11 +21,13 @@
         (l:info :database "Connecting ~a ~a" database-name conn)
         (setf *current-db* database-name
               *current-con* (sqlite:connect
-                             (etypecase conn
-                               (pathname conn)
-                               (string (if (string= conn ":memory:")
-                                           conn
-                                           (uiop:parse-native-namestring conn))))))
+                             (merge-pathnames
+                              (etypecase conn
+                                (pathname conn)
+                                (string (if (string= conn ":memory:")
+                                            conn
+                                            (uiop:parse-native-namestring conn))))
+                              (mconfig-pathname #.*package*))))
         (trigger 'db:connected)))))
 
 (defun db:disconnect ()

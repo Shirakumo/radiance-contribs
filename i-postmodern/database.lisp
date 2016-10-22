@@ -14,7 +14,7 @@
 ;; Implement closer erroring details of spec. (invalid fields, etc)
 
 (define-trigger startup-done ()
-  (db:connect (config-tree :postmodern :default)))
+  (db:connect (defaulted-config "radiance" :default)))
 
 (define-trigger server-stop ()
   (db:disconnect))

@@ -48,7 +48,8 @@
            (unless lambdalite::*tx* (lambdalite::persist ,name)))))))
 
 (define-trigger startup-done ()
-  (db:connect (config-tree :lambdalite :default)))
+  (defaulted-config "radiance.db" :connections "radiance")
+  (db:connect (defaulted-config "radiance" :default)))
 
 (define-trigger server-stop ()
   (db:disconnect))
@@ -56,7 +57,7 @@
 (defun database:connect (database-name)
   (with-simple-restart (skip "Skip connecting.")
     (flet ((err (msg) (error 'database-connection-failed :database database-name :message msg)))
-      (let ((conn (config-tree :lambdalite :connections database-name)))
+      (let ((conn (config :connections database-name)))
         (unless conn (err "No such connection found."))
         (when lambdalite::*db*
           (warn 'database-connection-already-open :database database-name)
@@ -64,9 +65,11 @@
         ;; Spec restarts for already open.
         (l:info :database "Connecting ~a ~a" database-name conn)
         (lambdalite:load-db
-         :path (etypecase conn
-                 (pathname conn)
-                 (string (uiop:parse-native-namestring conn))))
+         :path (merge-pathnames
+                (etypecase conn
+                  (pathname conn)
+                  (string (uiop:parse-native-namestring conn)))
+                (mconfig-pathname #.*package*)))
         (trigger 'db:connected)))))
 
 (defun database:disconnect ()
