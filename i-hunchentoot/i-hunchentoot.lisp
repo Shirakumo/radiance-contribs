@@ -12,24 +12,6 @@
 
 (defvar *listeners* (make-hash-table :test 'equalp))
 
-(defun whenthen (var func)
-  (when var (funcall func var)))
-
-(define-trigger server-start ()
-  (loop for config in (config-tree :server :instances)
-        do (server:start (gethash :port config)
-                         :address (gethash :address config)
-                         :ssl-key (whenthen (gethash :ssl-key config) #'data-file)
-                         :ssl-cert (whenthen (gethash :ssl-cert config) #'data-file)
-                         :ssl-pass (gethash :ssl-pass config))))
-
-(define-trigger server-stop ()
-  (loop for name being the hash-keys of *listeners*
-        do (let* ((pos (position #\: name))
-                  (port (parse-integer (subseq name (1+ pos))))
-                  (address (subseq name 0 pos)))
-             (server:stop port (unless (string= address "NIL") address)))))
-
 (defun mklist (port address ssl-cert ssl-key ssl-pass)
   (let ((args `(:port ,port :address ,address
                 :access-log-destination NIL

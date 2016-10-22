@@ -16,21 +16,6 @@
 (defvar *listeners* (make-hash-table :test 'equalp))
 (defvar *listener-lock* (bt:make-lock "LISTENERS"))
 
-(define-trigger (server-start 'launch-listeners) ()
-  (loop for config in (config-tree :server :instances)
-        do (server:start (gethash :port config)
-                         :address (gethash :address config)
-                         :ssl-key (whenthen (gethash :ssl-key config) #'data-file)
-                         :ssl-cert (whenthen (gethash :ssl-cert config) #'data-file)
-                         :ssl-pass (gethash :ssl-pass config))))
-
-(define-trigger server-stop ()
-  (loop for name being the hash-keys of *listeners*
-        do (let* ((pos (position #\: name))
-                  (port (parse-integer (subseq name (1+ pos))))
-                  (address (subseq name 0 pos)))
-             (server:stop port (unless (string= address "NIL") address)))))
-
 (defun server:start (port &key address ssl-cert ssl-key ssl-pass)
   (let ((name (format NIL "~a:~a" address port)))
     (l:info :server "Starting listener ~a" name)
@@ -62,9 +47,6 @@
   (bt:with-lock-held (*listener-lock*)
     (loop for name being the hash-keys of *listeners*
           collect name)))
-
-(defun whenthen (var func)
-  (when var (funcall func var)))
 
 (defun merge-hash-tables (target source &optional (transform #'identity))
   (when (and source target)

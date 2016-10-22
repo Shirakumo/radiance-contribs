@@ -12,11 +12,6 @@
 
 (defvar *listeners* (make-hash-table :test 'equalp))
 
-(define-trigger server-start ()
-  (loop for config in (config-tree :server :instances)
-        do (server:start (gethash :port config)
-                         :address (gethash :address config))))
-
 (defun server:start (port &key address ssl-cert ssl-key ssl-pass)
   (when (or ssl-cert ssl-key ssl-pass)
     (warn "SSL is currently not supported in WOO; ignored.")) ;; Until that is supported.
