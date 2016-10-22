@@ -31,11 +31,11 @@
 
 (defmacro with-south-vars ((&optional access-token access-secret) &body body)
   `(south:with-oauth-environment
-       (:oauth/request-token (config-tree :remote-auth :request-token)
-        :oauth/authenticate (config-tree :remote-auth :authenticate)
-        :oauth/access-token (config-tree :remote-auth :access-token)
-        :api-key (config-tree :remote-auth :api-key)
-        :api-secret (config-tree :remote-auth :api-secret)
+       (:oauth/request-token (config :request-token)
+        :oauth/authenticate (config :authenticate)
+        :oauth/access-token (config :access-token)
+        :api-key (config :api-key)
+        :api-secret (config :api-secret)
         :access-token ,access-token
         :access-secret ,access-secret)
      ,@body))
@@ -70,7 +70,7 @@
 (define-api remote-auth/callback (oauth_verifier &optional oauth_token) ()
   (with-south-vars ()
     (south:complete-authentication oauth_verifier oauth_token)
-    (let ((username (south:signed-request (config-tree :remote-auth :username))))
-      (auth:associate (user:get username :if-does-not-exist (or (config-tree :remote-auth :if-user-does-not-exist)
+    (let ((username (south:signed-request (config :username))))
+      (auth:associate (user:get username :if-does-not-exist (or (config :if-user-does-not-exist)
                                                                 :error)))
       (redirect (or (session:field *session* 'landing-page) #@"/")))))

@@ -20,7 +20,7 @@
           <input type="hidden" name="redirect" value="true" />
           <input type="submit" value="Submit" />
         </form>
-        <c:when test='(string= (config-tree :auth :registration) "open")'>
+        <c:when test='(string= (mconfig :remote-auth :registration) "open")'>
           <a href="/register" id="register-link">Register an Account</a>
         </c:when>
       </c:else>

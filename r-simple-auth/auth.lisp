@@ -117,7 +117,7 @@
 
 (defvar *nonce-salt* (make-random-string))
 (define-page register #@"auth/register" (:lquery (template "register.ctml"))
-  (if (string-equal (config-tree :auth :registration) "open")
+  (if (string-equal (config :registration) "open")
       (with-actions (error info)
           ((:register
             (r-ratify:with-form
