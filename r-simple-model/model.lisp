@@ -100,9 +100,3 @@
         (loop for k being the hash-keys of (fields data-model)
               for v being the hash-values of (fields data-model)
               collect (cons k v))))
-
-(defmethod field ((model data-model) field)
-  (gethash (string-downcase field) (fields model)))
-
-(defmethod (setf field) (value (model data-model) field)
-  (setf (gethash (string-downcase field) (fields model)) value))

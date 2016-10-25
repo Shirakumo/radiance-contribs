@@ -200,9 +200,3 @@
     ;; ensure anonymous user
     (user:get :anonymous :if-does-not-exist :create)
     (l:info :users "Synchronized ~d users from database." (hash-table-count idtable))))
-
-(defmethod field ((user user) field)
-  (user:field user field))
-
-(defmethod (setf field) (value (user user) field)
-  (setf (user:field user field) value))
