@@ -78,18 +78,19 @@
           (dotimes (i db::*default-pool-size*)
             (sleep 0.5)
             (db::spawn-standard-connection))
-          (trigger 'db:connected))))))
+          (trigger 'db:connected database-name))))))
 
 (defun db:disconnect ()
-  (l:info :database "Disconnecting ~a" *current-db*)
-  (bt:with-lock-held (*pool-lock*)
-    (loop for con = (pop *connection-pool*)
-          while con
-          do (postmodern:disconnect con)))
-  (setf *current-con* NIL
-        *current-setting* NIL
-        *current-db* NIL)
-  (trigger 'db:disconnected))
+  (let ((database-name *current-db*))
+    (l:info :database "Disconnecting ~a" database-name)
+    (bt:with-lock-held (*pool-lock*)
+      (loop for con = (pop *connection-pool*)
+            while con
+            do (postmodern:disconnect con)))
+    (setf *current-con* NIL
+          *current-setting* NIL
+          *current-db* NIL)
+    (trigger 'db:disconnected database-name)))
 
 (defun db:connected-p ()
   (not (null *current-db*)))

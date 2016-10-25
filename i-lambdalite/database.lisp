@@ -6,6 +6,7 @@
 
 (in-package #:i-lambdalite)
 
+(defvar *db-name* NIL)
 (defvar *schemas* (make-hash-table :test 'eql))
 
 (defun make-row-id ()
@@ -70,13 +71,16 @@
                   (pathname conn)
                   (string (uiop:parse-native-namestring conn)))
                 (mconfig-pathname #.*package*)))
-        (trigger 'db:connected)))))
+        (setf *db-name* database-name)
+        (trigger 'db:connected database-name)))))
 
 (defun database:disconnect ()
-  (l:info :database "Disconnecting ~a" lambdalite::*db-path*)
-  (setf lambdalite::*db* NIL
-        lambdalite::*db-path* NIL)
-  (trigger 'db:disconnected))
+  (let ((database-name *db-name*))
+    (l:info :database "Disconnecting ~a" database-name)
+    (setf lambdalite::*db* NIL
+          lambdalite::*db-path* NIL
+          *db-name* NIL)
+    (trigger 'db:disconnected database-name)))
 
 (defun database:connected-p ()
   (not (null lambdalite::*db*)))

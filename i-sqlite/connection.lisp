@@ -28,14 +28,15 @@
                                             conn
                                             (uiop:parse-native-namestring conn))))
                               (mconfig-pathname #.*package*))))
-        (trigger 'db:connected)))))
+        (trigger 'db:connected database-name)))))
 
 (defun db:disconnect ()
-  (l:info :database "Disconnecting ~a" *current-db*)
-  (sqlite:disconnect *current-con*)
-  (setf *current-con* NIL
-        *current-db* NIL)
-  (trigger 'db:disconnected))
+  (let ((database-name *current-db*))
+    (l:info :database "Disconnecting ~a" database-name)
+    (sqlite:disconnect *current-con*)
+    (setf *current-con* NIL
+          *current-db* NIL)
+    (trigger 'db:disconnected database-name)))
 
 (defun db:connected-p ()
   (not (null *current-con*)))
