@@ -5,9 +5,9 @@
 |#
 
 (in-package #:modularize-user)
-(define-module #:pretty-errors
+(define-module #:web-debug
   (:use #:cl #:radiance))
-(in-package #:pretty-errors)
+(in-package #:web-debug)
 
 (defun format-time (ut)
   (format NIL "~:@{~4,'0d.~2,'0d.~2,'0d ~2,'0d:~2,'0d:~2,'0d~}"

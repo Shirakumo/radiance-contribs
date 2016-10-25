@@ -5,7 +5,7 @@
 |#
 
 (in-package #:cl-user)
-(asdf:defsystem #:r-pretty-errors
+(asdf:defsystem #:r-web-debug
   :defsystem-depends-on (:radiance)
   :class "radiance:module"
   :module-name "PRETTY-ERRORS"
