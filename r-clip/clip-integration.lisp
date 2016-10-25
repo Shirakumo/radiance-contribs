@@ -4,15 +4,7 @@
  Author: Nicolas Hafner <shinmera@tymoon.eu>
 |#
 
-(in-package #:modularize-user)
-(define-module #:r-clip
-  (:use #:cl #:radiance)
-  (:export #:process #:lquery-wrapper))
 (in-package #:r-clip)
-
-(defpackage #:radiance-clip
-  (:use #:cl #:radiance #:clip)
-  (:shadow #:or*))
 
 (defun radiance-clip::or* (&rest vals)
   (loop for val in vals
@@ -65,16 +57,9 @@
 
 (defun process-pattern (value node attribute)
   (when (< 0 (length value))
-    (let ((args ()))
-      (flet ((parse (value)
-               (cond ((char= (aref value 0) #\()
-                      (let ((read (read-from-string value)))
-                        (setf args (mapcar #'clip:resolve-value (rest read)))
-                        (first read)))
-                     (T
-                      (parse-pattern value)))))
-        (setf (plump:attribute node attribute)
-              (uri-to-url (apply #'resolve (parse value) args) :representation :external))))))
+    (let ((args (parse-pattern value)))
+      (setf (plump:attribute node attribute)
+            (uri-to-url (apply #'resolve args) :representation :external)))))
 
 (macrolet ((define-pattern-attribute (name)
              (let ((symb (intern (concatenate 'string "@" (string name)))))
