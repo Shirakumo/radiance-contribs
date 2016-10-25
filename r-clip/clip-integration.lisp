@@ -20,8 +20,8 @@
                     (unless (string= val "") val)
                     val)))
 
-(defmethod clip:clip ((object standard-object) field)
-  (field object field))
+(defmethod clip:clip ((object dm:data-model) field)
+  (dm:field object field))
 
 (defun process (target &rest fields)
   (let ((*package* (find-package "RADIANCE-CLIP")))
