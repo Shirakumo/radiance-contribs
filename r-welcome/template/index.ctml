@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8"/>
+    <title>Welcome to Radiance</title>
+    <link rel="stylesheet" type="text/css" @href="/static/welcome/welcome.css" />
+  </head>
+  <body>
+    <header>
+      <img @src="/static/radiance-inv.png" alt="Radiance" />
+    </header>
+    <main>
+      <section id="welcome">
+        <h2>Lights On!</h2>
+        <p>
+          Welcome to Radiance. Being able to see this page means that you successfully set things up and have a server running. Fantastic!
+        </p>
+        <p>
+          Next you might want to try out one of the already built modules such as Reader. Simply <code>(ql:quickload :reader)</code> and then visit its page at <a @href="/!/reader/">/!/reader/</a>.
+        </p>
+      </section>
+      <section id="system">
+        <h2>System</h2>
+        <div class="props">
+          <label>Implementation</label><span lquery='(text (format NIL "~a ~a" (lisp-implementation-type) (lisp-implementation-version)))'></span>
+          <label>Radiance</label><span lquery="(text (asdf:component-version (asdf:find-system :radiance)))"></span>
+          <label>Quicklisp</label><span lquery='(text (ql-dist:version (ql-dist:dist "quicklisp")))'></span>
+          <label>Uptime</label><span lquery="(text (welcome::format-relative-time (uptime)))"></span>
+        </div>
+      </section>
+      <section id="modules">
+        <h2>Loaded Modules</h2>
+        <ul iterate="(modularize:list-modules)">
+            <li>
+              <h3 lquery="(text (module-name *))"></h3>
+              <div class="props">
+                <c:if test="(interface-p *)">
+                  <c:then>
+                    <label>Implementation</label><span lquery='(text (or (implementation *) "none"))'></span>
+                  </c:then>
+                  <c:else>
+                    <label>Domain</label><span lquery='(text (or (domain *) "none"))'></span>
+                    <label>Pages</label><span lquery='(text (or (module-pages *) "none"))'></span>
+                    <label>API</label><span lquery='(text (or (module-api-endpoints *) "none"))'></span>
+                    <label>Permissions</label><span lquery='(text (or (permissions *) "none"))'></span>
+                  </c:else>
+                </c:if>
+                <label>Hooks</label><span lquery='(text (or (list-hooks *) "none"))'></span>
+              </div>
+            </li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

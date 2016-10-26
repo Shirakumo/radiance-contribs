@@ -1,0 +1,37 @@
+(body
+ :background "#000000"
+ :color "#FFFFFF"
+ :font-family sans-serif
+ :font-size 16pt
+ :margin 0
+ (header
+  :background "#151515"
+  :margin 30px 0 0 0
+  :padding 10px 10px 10px 10px
+  :border-bottom 3px solid "#0088EE"
+  (img :margin -20px auto -20px auto
+       :display block
+       :max-width 700px
+       :max-height 140px))
+ (main
+  :max-width 800px
+  :margin 0 auto 0 auto
+  :padding 10px 20px 20px 20px
+  :background "#EEEEEE"
+  :color "#050505"
+  (.props
+   :display flex
+   :flex-wrap wrap
+   :margin 0 0 0 20px
+   (>*
+    :display inline-block
+    :flex-grow 1)
+   (>label
+    :width 200px
+    :font-weight bold)
+   (>span
+    :width "calc(100% - 200px)"))
+  (h3 :margin 0)
+  (ul
+   :list-style none
+   (li :margin 10px 0 0 0))))
