@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8"/>
+    <title>Internal Server Error</title>
+    <link rel="stylesheet" type="text/css" href="../static/style.css" @href="/static/simple-errors/style.css"/>
+    <meta name="viewport" content="width=device-width"/>
+  </head>
+  <body>
+    <header>
+      <h1>An Unexpected Error Was Encountered</h1>
+    </header>
+    <main>
+      <p>
+        Unfortunately something happened that we did not anticipate. Hopefully the problem will not persist.
+      </p>
+    </main>
+  </body>
+</html>
