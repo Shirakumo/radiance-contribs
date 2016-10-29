@@ -40,3 +40,12 @@
 
 (define-page welcome "/" (:lquery (template "index.ctml"))
   (r-clip:process T))
+
+(define-page not-found "/404" ()
+  (error 'request-not-found))
+
+(define-page denied "/403" ()
+  (error 'request-denied))
+
+(define-page internal-error "/500" ()
+  (error 'internal-error))
