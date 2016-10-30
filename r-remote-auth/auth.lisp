@@ -27,7 +27,7 @@
 
 (defun auth:login! (&optional (landing-page (referer *request*)) (session *session*))
   (setf (session:field session 'landing-page) landing-page)
-  (redirect #@"auth/login"))
+  (redirect "auth/login"))
 
 (defmacro with-south-vars ((&optional access-token access-secret) &body body)
   `(south:with-oauth-environment
@@ -56,15 +56,15 @@
                                              (uri (uri-to-url landing :representation :external)))))))
         (T (call-default-locator))))
 
-(define-page logout #@"auth/logout" ()
+(define-page logout "auth/logout" ()
   (session:end *session*)
   (redirect (or (session:field *session* 'landing-page) "/")))
 
-(define-page login #@"auth/login" ()
+(define-page login "auth/login" ()
   (with-south-vars ()
     (when (post/get "landing-page")
       (setf (session:field session 'landing-page) (post/get "landing-page")))
-    (redirect (south:initiate-authentication :method (uri-to-url #@"/api/remote-auth/callback" :representation :external)))))
+    (redirect (south:initiate-authentication :method (uri-to-url "/api/remote-auth/callback" :representation :external)))))
 
 (define-api remote-auth/callback (oauth_verifier &optional oauth_token) ()
   (with-south-vars ()

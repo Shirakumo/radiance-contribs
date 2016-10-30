@@ -79,7 +79,7 @@
              (api-output "Logged out."))
       (error 'api-error :message "You are not logged in.")))
 
-(define-page login #@"auth/login" (:lquery (template "login.ctml"))
+(define-page login "auth/login" (:lquery (template "login.ctml"))
   (r-clip:process
    T
    :user (auth:current)
@@ -110,12 +110,12 @@
                                     (uri (uri-to-url landing :representation :external)))))))
         (T (call-default-locator))))
 
-(define-page logout #@"auth/logout" ()
+(define-page logout "auth/logout" ()
   (session:end *session*)
   (redirect (or (session:field *session* 'landing-page) "/")))
 
 (defvar *nonce-salt* (make-random-string))
-(define-page register #@"auth/register" (:lquery (template "register.ctml"))
+(define-page register "auth/register" (:lquery (template "register.ctml"))
   (if (string-equal (config :registration) "open")
       (with-actions (error info)
           ((:register
