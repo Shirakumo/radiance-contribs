@@ -14,6 +14,9 @@
       <p>
         The content you are trying to access is locked up tight.
       </p>
+      <p class="reason" lquery="(text reason)">
+        Unfortunately, no detailed reason for this problem is available.
+      </p>
     </main>
   </body>
 </html>

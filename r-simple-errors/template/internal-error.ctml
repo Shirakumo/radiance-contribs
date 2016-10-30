@@ -14,6 +14,9 @@
       <p>
         Unfortunately something happened that we did not anticipate. Hopefully the problem will not persist.
       </p>
+      <p class="reason" lquery="(text reason)">
+        Unfortunately, no detailed reason for this problem is available.
+      </p>
     </main>
   </body>
 </html>

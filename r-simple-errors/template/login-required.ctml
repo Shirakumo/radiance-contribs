@@ -14,6 +14,9 @@
       <p>
         The content you are trying to access is locked up tight. However, you are not <a href="#" @href="<auth:page;login>">logged in</a> yet either. Perhaps remedying that will help.
       </p>
+      <p class="reason" lquery="(text reason)">
+        Unfortunately, no detailed reason for this problem is available.
+      </p>
     </main>
   </body>
 </html>
