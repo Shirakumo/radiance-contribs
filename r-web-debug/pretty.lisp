@@ -9,31 +9,20 @@
   (:use #:cl #:radiance))
 (in-package #:web-debug)
 
-(defun format-time (ut)
-  (format NIL "~:@{~4,'0d.~2,'0d.~2,'0d ~2,'0d:~2,'0d:~2,'0d~}"
-          (subseq (nreverse (multiple-value-list (decode-universal-time ut))) 3)))
-
 (defun slots (object)
   (when (ignore-errors (class-of object)) ;; The CLHS doesn't specify what happens if there is no class.
     (loop for slot in (c2mop:class-slots (class-of object))
           collect (list (c2mop:slot-definition-name slot)
                         (slot-value object (c2mop:slot-definition-name slot))))))
 
-(defun handle-condition (condition)
-  (l:warn :radiance "Handling stray condition: ~a" condition)
-  (if *debugger*
-      (invoke-debugger condition)
-      (invoke-restart
-       'radiance:set-data
-       (make-instance
-        'response
-        :content-type "application/xhtml+xml"
-        :return-code 500
-        :data (with-output-to-string (stream)
-                (plump:serialize
-                 (r-clip:process
-                  (plump:parse (template "error.ctml"))
-                  :condition condition
-                  :stack (dissect::stack)
-                  :restarts (dissect::restarts)
-                  :objects (remove-if #'null (list condition *request* *response* *session*))) stream))))))
+(defun radiance:present-error-page (condition)
+  (setf (return-code *response*) 500)
+  (setf (content-type *response*) "application/xthml+xml")
+  (plump:serialize
+   (r-clip:process
+    (plump:parse (template "error.ctml"))
+    :condition condition
+    :stack (dissect::stack)
+    :restarts (dissect::restarts)
+    :objects (remove-if #'null (list condition *request* *response* *session*)))
+   T))
