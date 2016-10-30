@@ -94,22 +94,21 @@
       (when landing
         (redirect landing)))))
 
-(define-resource-locator page (module (eql (load-time-value (interface :auth)))) (page &rest args)
+(define-resource-locator auth page (page &optional landing)
   (cond ((string-equal page "login")
-         (let ((landing (first args)))
-           (make-uri :domains (list "auth")
-                     :path (format NIL "login?landing-page=~a"
-                                   (urlencode:urlencode
-                                    (etypecase landing
-                                      (null "")
-                                      (string
-                                       (if (string= landing "#")
-                                           (if (boundp '*request*)
-                                               (uri-to-url (uri *request*) :representation :external)
-                                               "REFERER")
-                                           args))
-                                      (uri (uri-to-url landing :representation :external))))))))
-        (T (call-next-method))))
+         (make-uri :domains (list "auth")
+                   :path (format NIL "login?landing-page=~a"
+                                 (urlencode:urlencode
+                                  (etypecase landing
+                                    (null "")
+                                    (string
+                                     (if (string= landing "#")
+                                         (if (boundp '*request*)
+                                             (uri-to-url (uri *request*) :representation :external)
+                                             "REFERER")
+                                         args))
+                                    (uri (uri-to-url landing :representation :external)))))))
+        (T (call-default-locator))))
 
 (define-page logout #@"auth/logout" ()
   (session:end *session*)

@@ -46,16 +46,15 @@
              (api-output "Logged out."))
       (error 'api-error :message "You are not logged in.")))
 
-(define-resource-locator page (module (eql (interface :auth))) (page &rest args)
+(define-resource-locator auth page (page &optional landing)
   (cond ((string-equal page "login")
-         (let ((landing (first args)))
-           (make-uri :domains (list "auth")
-                     :path "login"
-                     :get `(("landing-page" ,(etypecase landing
-                                               (null "")
-                                               (string landing)
-                                               (uri (uri-to-url landing :representation :external))))))))
-        (T (call-next-method))))
+         (make-uri :domains (list "auth")
+                   :path "login"
+                   :get `(("landing-page" ,(etypecase landing
+                                             (null "")
+                                             (string landing)
+                                             (uri (uri-to-url landing :representation :external)))))))
+        (T (call-default-locator))))
 
 (define-page logout #@"auth/logout" ()
   (session:end *session*)

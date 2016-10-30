@@ -93,7 +93,7 @@
 
 (defmethod resolve ((resource resource) &rest args)
   (let ((*args* (or args *args*)))
-    (apply #'resource (name resource) (target resource) (mapcar #'resolve (args resource)))))
+    (apply #'resource (target resource) (name resource) (mapcar #'resolve (args resource)))))
 
 (defun read-resource ()
   (when (char= (or (peek) #\ ) #\<)
