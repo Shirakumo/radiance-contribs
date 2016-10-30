@@ -16,7 +16,7 @@
         </tr>
         <tr>
           <td>Uptime</td>
-          <td lquery="(text (simple-admin::format-seconds (uptime)))"></td>
+          <td lquery="(text (format-relative-time (uptime)))"></td>
         </tr>
       </tbody>
       <tbody>

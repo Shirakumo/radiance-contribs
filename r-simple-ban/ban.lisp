@@ -66,8 +66,8 @@
   (let ((limit (gethash (remote request) *bans*)))
     (when limit
       (if (or (not (integerp limit)) (< (get-universal-time) limit))
-          (error 'request-denied :message (format NIL "~:[You have been banned.~;You have been banned until ~:*~a.~]"
-                                                  (when (integerp limit) (format-universal-time limit))))
+          (error 'request-denied :message (format NIL "You have been banned.~@[ Your ban will be lifted ~a.~]"
+                                                  (when (integerp limit) (format-time limit))))
           (ban:release (remote request))))))
 
 (define-implement-hook admin

@@ -12,7 +12,7 @@
       <c:when test="condition">
         <span class="condition">
           Condition of type <span class="type" lquery="(text (type-of condition))">TYPE</span>
-          occurred on <span class="time" lquery="(text (pretty-errors::format-time (get-universal-time)))">TIME</span>
+          occurred on <span class="time" lquery="(text (format-human-date (get-universal-time)))">TIME</span>
           while requesting <span class="request" lquery="(text (uri-to-url (uri (*request*)) :representation :external))">REQUEST</span>.
         </span>
       </c:when>

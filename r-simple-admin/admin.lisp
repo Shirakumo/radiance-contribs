@@ -14,20 +14,6 @@
 (defvar *categories* (make-hash-table :test 'equalp))
 (defvar *prepared-categories* NIL)
 
-(defun format-seconds (s)
-  (let ((y (floor (/ s (* 60 60 24 365))))
-        (d (floor (/ (mod s (* 60 60 24 365)) (* 60 60 24))))
-        (h (floor (/ (mod s (* 60 60 24)) (* 60 60))))
-        (m (floor (/ (mod s (* 60 60)) (* 60))))
-        (s (mod s 60)))
-    (print (list y d h m s))
-    (format NIL "~:[~d years~;~*~]~:[ ~d days~;~*~]~:[ ~d hours~;~*~]~:[ ~d minutes~;~*~]~:[ ~d seconds~;~*~]"
-            (= y 0) y (= d 0) d (= h 0) h (= m 0) m (= s 0) s)))
-
-(defun format-time (ut)
-  (format NIL "~:@{~4,'0d.~2,'0d.~2,'0d ~2,'0d:~2,'0d:~2,'0d~}"
-          (subseq (nreverse (multiple-value-list (decode-universal-time ut))) 3)))
-
 (defun prepare-categories ()
   (setf *prepared-categories*
         (loop for title being the hash-keys of *categories*

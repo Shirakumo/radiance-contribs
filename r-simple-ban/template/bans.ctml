@@ -16,7 +16,7 @@
           <tr>
 	    <td><input type="checkbox" name="selected[]" form="massEditForm" lquery="(val (first *))" /></td>
             <td lquery="(text (first *))">IP</td>
-            <td lquery="(text (if (integerp (second *)) (format-universal-time (second *)) T))">JAIL TIME</td>
+            <td lquery="(text (if (integerp (second *)) (format-time (second *)) T))">JAIL TIME</td>
 	    <td>
               <form action="#" method="get">
 	        <input type="hidden" name="ip" lquery="(val (first *))" />

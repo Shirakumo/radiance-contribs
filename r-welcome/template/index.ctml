@@ -25,7 +25,7 @@
           <label>Implementation</label><span lquery='(text (format NIL "~a ~a" (lisp-implementation-type) (lisp-implementation-version)))'></span>
           <label>Radiance</label><span lquery="(text (asdf:component-version (asdf:find-system :radiance)))"></span>
           <label>Quicklisp</label><span lquery='(text (ql-dist:version (ql-dist:dist "quicklisp")))'></span>
-          <label>Uptime</label><span lquery="(text (welcome::format-relative-time (uptime)))"></span>
+          <label>Uptime</label><span lquery="(text (format-relative-time (uptime)))"></span>
         </div>
       </section>
       <section id="modules">
