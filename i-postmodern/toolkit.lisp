@@ -17,8 +17,9 @@
   `(handler-case (progn ,@body)
      (cl-postgres-error:syntax-error-or-access-violation (err)
        (when (string= "42P01" (cl-postgres-error::database-error-code err))
-         (error 'database-invalid-collection :collection ,collection
-                                             :message (cl-postgres-error::database-error-message err))))))
+         (error 'invalid-collection :database *current-db*
+                                    :collection ,collection
+                                    :message (cl-postgres-error::database-error-message err))))))
 
 (defun valid-name-p (name)
   (loop for char across (string-downcase name)
@@ -26,10 +27,14 @@
 
 (defun check-collection-name (collection)
   (unless (valid-name-p collection)
-    (error 'database-invalid-collection :collection collection :message "Invalid name, only a-z, - and _ are allowed.")))
+    (error 'invalid-collection :database *current-db*
+                               :collection collection
+                               :message "Invalid name, only a-z, - and _ are allowed.")))
 
 (defun check-collection-exists (collection)
   (check-collection-name collection)
   (with-connection
     (unless (postmodern:table-exists-p (string-downcase collection))
-      (error 'database-invalid-collection :collection collection :message "Collection does not exist on database."))))
+      (error 'invalid-collection :database *current-db*
+                                 :collection collection
+                                 :message "Collection does not exist on database."))))

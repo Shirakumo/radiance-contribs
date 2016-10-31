@@ -11,7 +11,7 @@
 
 (defun db:connect (database-name)
   (with-simple-restart (skip "Skip connecting.")
-    (flet ((err (msg) (error 'database-connection-failed :database database-name :message msg)))
+    (flet ((err (msg) (error 'db:connection-failed :database database-name :message msg)))
       (let ((conn (config :connections database-name)))
         (unless conn (err "No such connection found."))
         (when *current-con*

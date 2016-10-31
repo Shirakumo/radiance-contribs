@@ -13,8 +13,9 @@
 	      ;; Gross, but what can you do.
               (when (and (<= 13 (length (sqlite:sqlite-error-message err)))
                          (string= "no such table" (sqlite:sqlite-error-message err) :end2 13))
-                (error 'database-invalid-collection :collection ,collection
-                                                    :message (sqlite:sqlite-error-message err))))))
+                (error 'db:invalid-collection :database *current-db* 
+                                              :collection ,collection
+                                              :message (sqlite:sqlite-error-message err))))))
      ,@body))
 
 (defun valid-name-p (name)

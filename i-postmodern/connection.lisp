@@ -18,7 +18,7 @@
   (bt:with-lock-held (*pool-lock*)
     (l:debug :database "Spawning connection for ~a~:[~;:*~]@~a:~a/~a" host port user pass db)
     (push (or (postmodern:connect db user pass host :port port)
-              (error 'database-connection-failed :database *current-db*))
+              (error 'db:connection-failed :database *current-db*))
           *connection-pool*)))
 
 (defun db::spawn-standard-connection (&optional (setting *current-setting*))
@@ -59,7 +59,7 @@
 
 (defun db:connect (database-name)
   (with-simple-restart (skip "Skip connecting.")
-    (flet ((err (msg) (error 'database-connection-failed :database database-name :message msg)))
+    (flet ((err (msg) (error 'db:connection-failed :database database-name :message msg)))
       (let ((conn (config :connections database-name)))
         (unless conn (err "No such connection found."))
         (when *current-db*

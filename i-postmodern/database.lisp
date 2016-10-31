@@ -28,7 +28,7 @@
     (postmodern:table-exists-p (string-downcase collection))))
 
 (defun db:create (collection structure &key indices (if-exists :ignore))
-  (flet ((err (msg) (error 'database-invalid-collection :collection collection :message msg)))
+  (flet ((err (msg) (error 'db:invalid-collection :database *current-db* :collection collection :message msg)))
     (check-collection-name collection)
     (unless structure (err "Structure cannot be empty."))
     (let ((query (format NIL "CREATE TABLE \"~a\" (\"_id\" INTEGER PRIMARY KEY DEFAULT nextval('~:*~a-id-seq'), ~{~a~^, ~});"
@@ -37,7 +37,7 @@
         (when (postmodern:table-exists-p (string-downcase collection))
           (ecase if-exists
             (:ignore (return-from db:create NIL))
-            (:error (error 'database-collection-already-exists :collection collection))))
+            (:error (error 'db:collection-already-exists :database *current-db* :collection collection))))
         (postmodern:query (format NIL "CREATE SEQUENCE \"~a-id-seq\";" (string-downcase collection)))
         (postmodern:query query)
         (postmodern:query (format NIL "CREATE INDEX ON \"~a\" (\"_id\")" (string-downcase collection)))
@@ -50,7 +50,7 @@
       T)))
 
 (defun compile-field (field)
-  (flet ((err (msg) (error 'database-invalid-field :fielddef field :message msg)))
+  (flet ((err (msg) (error 'db:invalid-field :field field :message msg)))
     (destructuring-bind (name type) field
       (unless (valid-name-p name)
         (err "Invalid name, only a-z, - and _ are allowed."))

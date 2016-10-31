@@ -54,7 +54,7 @@
     (or (gethash username *user-cache*)
         (ecase if-does-not-exist
           (:create (user::create username))
-          (:error (error 'user-not-found :user username))
+          (:error (error 'db:not-found :name username))
           (:anonymous (user:get "anonymous"))
           ((NIL :NIL))))))
 

@@ -7,7 +7,6 @@
 (in-package #:i-lambdalite)
 
 (defvar *db-name* NIL)
-(defvar *schemas* (make-hash-table :test 'eql))
 
 (defun make-row-id ()
   (lambdalite:with-tx
@@ -55,9 +54,9 @@
 (define-trigger server-stop ()
   (db:disconnect))
 
-(defun database:connect (database-name)
+(defun db:connect (database-name)
   (with-simple-restart (skip "Skip connecting.")
-    (flet ((err (msg) (error 'database-connection-failed :database database-name :message msg)))
+    (flet ((err (msg) (error 'db:connection-failed :database database-name :message msg)))
       (let ((conn (config :connections database-name)))
         (unless conn (err "No such connection found."))
         (when lambdalite::*db*
@@ -74,7 +73,7 @@
         (setf *db-name* database-name)
         (trigger 'db:connected database-name)))))
 
-(defun database:disconnect ()
+(defun db:disconnect ()
   (let ((database-name *db-name*))
     (l:info :database "Disconnecting ~a" database-name)
     (setf lambdalite::*db* NIL
@@ -82,29 +81,38 @@
           *db-name* NIL)
     (trigger 'db:disconnected database-name)))
 
-(defun database:connected-p ()
+(defun db:connected-p ()
   (not (null lambdalite::*db*)))
 
-(defun database:collections ()
-  (union (remove 'rowid (lambdalite:list-tables))
-         (loop for name being the hash-keys of *schemas* collect name)))
+(defun db:collections ()
+  (loop for row in (lambdalite:select 'schemas)
+        collect (getf row :/name)))
 
-(defun database:collection-exists-p (collection)
-  (find (ensure-collection collection) (database:collections)))
+(defun db:collection-exists-p (collection)
+  (not (null (lambdalite:select 'schemas (lambdalite:where (eql :/name (ensure-collection collection)))))))
 
-(defun database:create (collection structure &key indices (if-exists :ignore))
-  (setf (gethash (ensure-collection collection) *schemas*)
-        structure))
+(defun db:create (collection structure &key indices (if-exists :ignore))
+  (let ((collection (ensure-collection collection)))
+    (when (find collection (db:collections))
+      (ecase if-exists
+        (:ignore (return-from db:create))
+        (:error (error 'db:collection-already-exists :collection collection :database *db-name*))
+        (:supersede (db:drop collection))))
+    (lambdalite:insert 'schemas `(:/name ,collection
+                                  :/structure ,structure
+                                  :/indices ,indices))))
 
-(defun database:structure (collection)
-  (gethash (ensure-collection collection) *schemas*))
+(defun db:structure (collection)
+  (lambdalite:select1 'schemas (lambdalite:where (eql :/name (ensure-collection collection)))))
 
-(defun database:empty (collection)
+(defun db:empty (collection)
   (lambdalite:del (ensure-collection collection) (constantly T)))
 
-(defun database:drop (collection)
-  (lambdalite::with-lock
-    (remhash (ensure-collection collection) lambdalite::*db*)))
+(defun db:drop (collection)
+  (let ((collection (ensure-collection collection)))
+    (lambdalite:del 'schemas (lambdalite:where (eql :/name collection)))
+    (lambdalite::with-lock
+      (remhash collection lambdalite::*db*))))
 
 (defun sort-by-specs (list specs)
   (let ((sortfunc))
@@ -130,37 +138,34 @@
                                           order))))))
       list)))
 
-(defun database:iterate (collection query function &key fields (skip 0) amount sort accumulate)
-  (funcall
-   (if accumulate
-       (lambda (fun seq)
-         (mapcar fun seq))
-       (lambda (fun seq)
-         (map NIL fun seq)))
-   (lambda (row)
-     (funcall function
-              (let ((table (make-hash-table :test 'equalp)))
-                (if fields
-                    (dolist (field fields)
-                      (setf (gethash (subseq (string field) 1) table)
-                            (getf row (ensure-field field))))
-                    (loop for (field val) on row by #'cddr
-                          do (setf (gethash (subseq (string field) 1) table) val)))
-                table)))
-   (loop for i from 0
-         for row in (sort-by-specs (lambdalite:select (ensure-collection collection) query) sort)
-         while (or (not amount)
-                   (< i (+ skip amount)))
-         when (<= i skip)
-         collect row)))
+(defun db:iterate (collection query function &key fields (skip 0) amount sort accumulate)
+  (flet ((row-processor (row)
+           (funcall function
+                    (let ((table (make-hash-table :test 'equalp)))
+                      (if fields
+                          (dolist (field fields)
+                            (setf (gethash (subseq (string field) 1) table)
+                                  (getf row (ensure-field field))))
+                          (loop for (field val) on row by #'cddr
+                                do (setf (gethash (subseq (string field) 1) table) val)))
+                      table))))
+    (let ((data (loop for i from 0
+                      for row in (sort-by-specs (lambdalite:select (ensure-collection collection) query) sort)
+                      while (or (not amount)
+                                (< i (+ skip amount)))
+                      when (<= i skip)
+                      collect row)))
+      (if accumulate
+          (mapcar #'row-processor data)
+          (map NIL #'row-processor data)))))
 
-(defun database:select (collection query &key fields (skip 0) amount sort)
-  (database:iterate collection query #'identity :fields fields :skip skip :amount amount :accumulate T))
+(defun db:select (collection query &key fields (skip 0) amount sort)
+  (db:iterate collection query #'identity :fields fields :skip skip :amount amount :accumulate T))
 
-(defun database:count (collection query)
-  (length (database:select collection query :fields '(:_id))))
+(defun db:count (collection query)
+  (length (db:select collection query :fields '(:_id))))
 
-(defun database:insert (collection data)
+(defun db:insert (collection data)
   (let* ((id (make-row-id))
          (list (list :/_id id)))
     (etypecase data
@@ -171,7 +176,7 @@
     (lambdalite:insert (ensure-collection collection) list)
     id))
 
-(defun database:remove (collection query &key (skip 0) amount sort)
+(defun db:remove (collection query &key (skip 0) amount sort)
   (with-table-change (collection rows)
     (let ((i 0))
       (delete-if (lambda (row)
@@ -182,7 +187,7 @@
                      (incf i)))
                  (sort-by-specs rows sort)))))
 
-(defun database:update (collection query data &key (skip 0) amount sort)
+(defun db:update (collection query data &key (skip 0) amount sort)
   (let ((setter (etypecase data
                   (hash-table
                    (lambda (row)
@@ -204,12 +209,12 @@
               do (funcall setter row))))
     NIL))
 
-(defmacro database:with-transaction (() &body body)
+(defmacro db:with-transaction (() &body body)
   `(lambdalite:with-tx
      ,@body))
 
 (defvar *rowvar*)
-(defmacro database:query (query-form)
+(defmacro db:query (query-form)
   (if (eql query-form :all)
       `(constantly T)
       (let ((*rowvar* (gensym "ROW")))

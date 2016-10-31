@@ -26,7 +26,7 @@
 
 (defun db:create (collection structure &key indices (if-exists :ignore))
   (let ((collection (string-downcase collection)))
-    (flet ((err (msg) (error 'database-invalid-collection :collection collection :message msg)))
+    (flet ((err (msg) (error 'db:invalid-collection :database *current-db* :collection collection :message msg)))
       (check-collection-name collection)
       (unless structure (err "Structure cannot be empty."))
       (let ((query (format NIL "CREATE TABLE \"~a\" (\"_id\" INTEGER PRIMARY KEY AUTOINCREMENT, ~{~a~^, ~});"
@@ -34,7 +34,7 @@
         (when (db:collection-exists-p collection)
           (ecase if-exists
             (:ignore (return-from db:create NIL))
-            (:error (error 'database-collection-already-exists :collection collection))))
+            (:error (error 'db:collection-already-exists :database *current-db* :collection collection))))
         (exec-query query ())
         (dolist (index indices)
           (let ((index (if (listp index) index (list index))))
@@ -44,7 +44,7 @@
         collection))))
 
 (defun compile-field (field)
-  (flet ((err (msg) (error 'database-invalid-field :fielddef field :message msg)))
+  (flet ((err (msg) (error 'db:invalid-field :field field :message msg)))
     (destructuring-bind (name type) field
       (unless (valid-name-p name)
         (err "Invalid name, only a-z, - and _ are allowed."))
