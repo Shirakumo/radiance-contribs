@@ -32,6 +32,8 @@
 (defmethod initialize-instance :after ((session session) &key)
   (l:debug :session "Starting session ~a" session)
   (setf (gethash (id session) *session-table*) session)
+  (when (boundp '*request*)
+    (setf (gethash 'session (data *request*)) session))
   (trigger 'session:create session)
   ;; Trigger cookie creation
   (setf (session:timeout session)
@@ -49,7 +51,10 @@
 (defun ensure-session (session)
   (etypecase session
     (session:session session)
-    (string (session:get session))))
+    (string (session:get session))
+    (null (or (when (boundp '*request*)
+                (gethash 'session (data *request*)))
+              (session:start)))))
 
 (defun session:= (a b)
   (eql (ensure-session a)
@@ -64,41 +69,48 @@
   (loop for session being the hash-values of *session-table*
         collect session))
 
-(defun session:get (session-id)
-  (let ((session (gethash session-id *session-table*)))
+(defun session:get (&optional session-id)
+  (let ((session (ensure-session session-id)))
     (when session
       (or (and (session:active-p session) session)
           (not (session:end session))))))
 
-(defun session:id (session)
-  (id session))
+(defun session:id (&optional session)
+  (id (ensure-session session)))
 
-(defun session:field (session field)
-  (gethash field (fields session)))
+(defun session:field (session/field &optional (field NIL field-p))
+  (if field-p
+      (gethash field (fields (ensure-session session/field)))
+      (gethash session/field (fields (ensure-session NIL)))))
 
-(defun (setf session:field) (value session field)
-  (setf (gethash field (fields session)) value))
+(defun (setf session:field) (value session/field &optional (field NIL field-p))
+  (if field-p
+      (setf (gethash field (fields (ensure-session session/field))) value)
+      (setf (gethash session/field (fiels (ensure-session NIL))) value)))
 
-(defun session:timeout (session)
-  (timeout session))
+(defun session:timeout (&optional session)
+  (timeout (ensure-session session)))
 
-(defun (setf session:timeout) (seconds session)
-  (setf (timeout session) seconds)
-  ;; Update cookie
-  (when (and (boundp '*request*) (boundp '*response*))
-    (setf (cookie "radiance-session" :domain (domain *request*) :path "/" :timeout (timeout session) :http-only T)
-          ;; Note: Add support for the secure flag through https options in the main framework
-          (make-cookie-value session))))
+(defun (setf session:timeout) (seconds &optional session)
+  (let ((session (ensure-session session)))
+    (setf (timeout session) seconds)
+    ;; Update cookie
+    (when (and (boundp '*request*) (boundp '*response*))
+      (setf (cookie "radiance-session" :domain (domain *request*) :path "/" :timeout (timeout session) :http-only T)
+            ;; Note: Add support for the secure flag through https options in the main framework
+            (make-cookie-value session)))))
 
-(defun session:end (session)
-  (l:debug :session "Ending session ~s" session)
-  (setf (timeout session) 0)
-  (remhash (id session) *session-table*)
-  session)
+(defun session:end (&optional session)
+  (let ((session (ensure-session session)))
+    (l:debug :session "Ending session ~s" session)
+    (setf (timeout session) 0)
+    (remhash (id session) *session-table*)
+    session))
 
-(defun session:active-p (session)
-  (and (< (get-universal-time) (timeout session))
-       session))
+(defun session:active-p (&optional session)
+  (let ((session (ensure-session session)))
+    (and (< (get-universal-time) (timeout session))
+         session)))
 
 (defun session::prune ()
   (l:info :session "Pruning dead sessions.")
@@ -108,7 +120,7 @@
            *session-table*))
 
 (define-trigger request ()
-  (setf *session* (session:start)))
+  (session:start))
 
 (defun session::start-prune-thread ()
   (when *prune-thread*

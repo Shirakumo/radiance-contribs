@@ -19,7 +19,7 @@
    #:define-form-getter))
 (in-package #:r-ratify)
 
-(defun session-var (var &optional (session *session*))
+(defun session-var (var &optional (session (session:get)))
   (session:field session var))
 
 (ratify:define-test user (name start end)
@@ -131,7 +131,7 @@
 (define-form-getter post/get (var &optional (request '*request*))
   `(post/get ,var ,request))
 
-(define-form-getter session (var &optional (session '*session*))
+(define-form-getter session (var &optional (session '(session:get)))
   `(session:field ,session ,var))
 
 (define-form-parser nonce (getter &optional hash salt)

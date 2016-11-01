@@ -14,10 +14,10 @@
 ;; Out to config at some point
 (defvar *salt* "dajke20090")
 
-(defun auth:current (&optional (session *session*))
+(defun auth:current (&optional (session (session:get)))
   (session:field session 'user))
 
-(defun auth:associate (user &optional (session *session*))
+(defun auth:associate (user &optional (session (session:get)))
   (v:info :auth "Associating ~a with ~a and prolonging for ~a"
           session user auth:*login-timeout*)
   (setf (session:field session 'user) user)
@@ -28,7 +28,7 @@
           (otherwise auth:*login-timeout*)))
   (trigger 'auth:associate session))
 
-(defun auth:login! (&optional (landing-page (referer *request*)) (session *session*))
+(defun auth:login! (&optional (landing-page (referer *request*)) (session (session:get)))
   (setf (session:field session 'landing-page)
         (etypecase landing-page
           (uri (uri-to-url landing-page :representation :external))
@@ -65,8 +65,8 @@
         (cond
           ((string= hash (cryptos:pbkdf2-hash password *salt*))
            (auth:associate user)
-           (let ((landing (or (session:field *session* 'landing-page) "/")))
-             (setf (session:field *session* 'landing-page) NIL)
+           (let ((landing (or (session:field 'landing-page) "/")))
+             (setf (session:field 'landing-page) NIL)
              (if redirect
                  (redirect landing)
                  (api-output "Login successful."))))
@@ -75,7 +75,7 @@
 
 (define-api simple-auth/logout () ()
   (if (auth:current)
-      (progn (session:end *session*)
+      (progn (session:end)
              (api-output "Logged out."))
       (error 'api-error :message "You are not logged in.")))
 
@@ -85,12 +85,12 @@
    :user (auth:current)
    :msg (get-var "msg"))
   (when (or* (post/get "landing-page"))
-    (setf (session:field *session* 'landing-page)
+    (setf (session:field 'landing-page)
           (if (string= (post/get "landing-page") "REFERER")
               (referer *request*)
               (post/get "landing-page"))))
   (when (auth:current)
-    (let ((landing (session:field *session* 'landing-page)))
+    (let ((landing (session:field 'landing-page)))
       (when landing
         (redirect landing)))))
 
@@ -111,8 +111,8 @@
         (T (call-default-locator))))
 
 (define-page logout "auth/logout" ()
-  (session:end *session*)
-  (redirect (or (session:field *session* 'landing-page) "/")))
+  (session:end)
+  (redirect (or (session:field 'landing-page) "/")))
 
 (defvar *nonce-salt* (make-random-string))
 (define-page register "auth/register" (:lquery (template "register.ctml"))
@@ -134,8 +134,8 @@
                 (auth::set-password user password)
                 (auth:associate user)))))
         (let ((nonce (make-random-string)))
-          (setf (session:field *session* :nonce-hash) (cryptos:pbkdf2-hash nonce *nonce-salt*)
-                (session:field *session* :nonce-salt) *nonce-salt*)
+          (setf (session:field :nonce-hash) (cryptos:pbkdf2-hash nonce *nonce-salt*)
+                (session:field :nonce-salt) *nonce-salt*)
           (r-clip:process
            T
            :msg (or error info)

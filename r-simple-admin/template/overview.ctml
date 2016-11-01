@@ -64,7 +64,7 @@
         </tr>
         <tr>
           <td>Session</td>
-          <td lquery="(text (symbol-value '*session*))"></td>
+          <td lquery="(text (session:get))"></td>
         </tr>
       </tbody>
     </table>

@@ -11,10 +11,10 @@
   (:domain "auth"))
 (in-package #:remote-auth)
 
-(defun auth:current (&optional (session *session*))
+(defun auth:current (&optional (session (session:get)))
   (session:field session 'user))
 
-(defun auth:associate (user &optional (session *session*))
+(defun auth:associate (user &optional (session (session:get)))
   (v:info :auth "Associating ~a with ~a and prolonging for ~a"
           session user auth:*login-timeout*)
   (setf (session:field session 'user) user)
@@ -25,7 +25,7 @@
           (otherwise auth:*login-timeout*)))
   (trigger 'auth:associate session))
 
-(defun auth:login! (&optional (landing-page (referer *request*)) (session *session*))
+(defun auth:login! (&optional (landing-page (referer *request*)) (session (session:get)))
   (setf (session:field session 'landing-page) landing-page)
   (redirect "auth/login"))
 
@@ -42,7 +42,7 @@
 
 (define-api simple-auth/logout () ()
   (if (auth:current)
-      (progn (session:end *session*)
+      (progn (session:end)
              (api-output "Logged out."))
       (error 'api-error :message "You are not logged in.")))
 
@@ -57,13 +57,13 @@
         (T (call-default-locator))))
 
 (define-page logout "auth/logout" ()
-  (session:end *session*)
-  (redirect (or (session:field *session* 'landing-page) "/")))
+  (session:end)
+  (redirect (or (session:field 'landing-page) "/")))
 
 (define-page login "auth/login" ()
   (with-south-vars ()
     (when (post/get "landing-page")
-      (setf (session:field session 'landing-page) (post/get "landing-page")))
+      (setf (session:field 'landing-page) (post/get "landing-page")))
     (redirect (south:initiate-authentication :method (uri-to-url "/api/remote-auth/callback" :representation :external)))))
 
 (define-api remote-auth/callback (oauth_verifier &optional oauth_token) ()
@@ -72,4 +72,4 @@
     (let ((username (south:signed-request (config :username))))
       (auth:associate (user:get username :if-does-not-exist (or (config :if-user-does-not-exist)
                                                                 :error)))
-      (redirect (or (session:field *session* 'landing-page) #@"/")))))
+      (redirect (or (session:field 'landing-page) #@"/")))))

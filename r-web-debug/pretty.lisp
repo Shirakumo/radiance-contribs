@@ -24,5 +24,5 @@
     :condition condition
     :stack (dissect::stack)
     :restarts (dissect::restarts)
-    :objects (remove-if #'null (list condition *request* *response* *session*)))
+    :objects (remove-if #'null (list condition *request* *response*)))
    T))
