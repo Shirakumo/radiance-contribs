@@ -39,10 +39,10 @@
                     <label>Implementation</label><span lquery='(text (or (implementation *) "none"))'></span>
                   </c:then>
                   <c:else>
-                    <label>Domain</label><span lquery='(text (or (domain *) "none"))'></span>
+                    <label>Domain</label><span lquery='(text (or (module-domain *) "none"))'></span>
                     <label>Pages</label><span lquery='(text (or (module-pages *) "none"))'></span>
                     <label>API</label><span lquery='(text (or (module-api-endpoints *) "none"))'></span>
-                    <label>Permissions</label><span lquery='(text (or (permissions *) "none"))'></span>
+                    <label>Permissions</label><span lquery='(text (or (module-permissions *) "none"))'></span>
                   </c:else>
                 </c:if>
                 <label>Hooks</label><span lquery='(text (or (list-hooks *) "none"))'></span>
