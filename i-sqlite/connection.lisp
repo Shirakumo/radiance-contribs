@@ -21,13 +21,13 @@
         (l:info :database "Connecting ~a ~a" database-name conn)
         (setf *current-db* database-name
               *current-con* (sqlite:connect
-                             (merge-pathnames
-                              (etypecase conn
-                                (pathname conn)
-                                (string (if (string= conn ":memory:")
-                                            conn
-                                            (uiop:parse-native-namestring conn))))
-                              (mconfig-pathname #.*package*))))
+                             (if (string= conn ":memory:")
+                                 conn
+                                 (merge-pathnames
+                                  (etypecase conn
+                                    (pathname conn)
+                                    (string (uiop:parse-native-namestring conn)))
+                                  (mconfig-pathname #.*package*)))))
         (trigger 'db:connected database-name)))))
 
 (defun db:disconnect ()
