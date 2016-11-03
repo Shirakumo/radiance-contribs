@@ -69,12 +69,10 @@
 (defun (setf panel-option) (function option)
   (setf (gethash option *panel-options*) function))
 
-(define-options-definer profile:define-panel-option panel-option (namevar bodyvar valuevar))
-
 (defmacro profile:define-panel (name options &body body)
   (let ((name (string-downcase name)))
     (destructuring-bind (&key access (user (gensym "USER")) &allow-other-keys) options
-      (multiple-value-bind (body forms) (expand-options *panel-options* options body name)
+      (multiple-value-bind (body forms) (expand-options 'profile:panel options name body)
         (declare (ignore forms))
         `(setf (profile:panel ,name)
                (clip:make-clipboard

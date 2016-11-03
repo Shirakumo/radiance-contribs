@@ -41,19 +41,17 @@
             (lquery:$ (serialize) (node)))))
       body))
 
-(define-page-option lquery (page uri body template)
+(define-option radiance:page lquery (page body uri &optional template)
   (if template
       `((setf (content-type *response*) "application/xhtml+xml; charset=utf-8")
         ,@(transform-body body template))
       body))
 
-(define-implement-hook admin
-  (admin:define-panel-option lquery (name category body template)
-    (transform-body body template)))
+(define-option admin:panel lquery (name body category &optional template)
+  (transform-body body template))
 
-(define-implement-hook profile
-  (profile:define-panel-option lquery (name body template)
-    (transform-body body template)))
+(define-option profile:panel lquery (name body &optional template)
+  (transform-body body template))
 
 (defun process-pattern (value node attribute)
   (when (< 0 (length value))

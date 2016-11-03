@@ -64,13 +64,11 @@
 (defun (setf panel-option) (function option)
   (setf (gethash option *panel-options*) function))
 
-(define-options-definer admin:define-panel-option panel-option (namevar category bodyvar valuevar))
-
 (defmacro admin:define-panel (name category options &body body)
   (let ((name (string-downcase name))
         (category (string-downcase category)))
     (destructuring-bind (&key icon tooltip access &allow-other-keys) options
-      (multiple-value-bind (body forms) (expand-options *panel-options* options body name category)
+      (multiple-value-bind (body forms) (expand-options 'admin:panel options name body category)
         (declare (ignore forms))
         `(setf (admin:panel ,category ,name)
                (clip:make-clipboard
