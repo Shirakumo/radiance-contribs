@@ -10,7 +10,8 @@
   (:implements #:cache))
 (in-package #:simple-cache)
 
-(defvar *cache-directory* (data-file "simple-cache/"))
+(defvar *cache-directory* (make-pathname :name NIL :type NIL :defaults
+                                         (merge-pathnames "cache/" (mconfig-pathname #.*package*))))
 (defvar *caches* (make-hash-table :test 'eql))
 
 (define-trigger startup-done ()
@@ -29,7 +30,8 @@
   (merge-pathnames (format NIL "~a/~a" (package-name (symbol-package symbol)) (symbol-name symbol)) *cache-directory*))
 
 (defun cache:get (name)
-  (read-data-file (cache::file name)))
+  (alexandria:read-file-into-byte-vector
+   (cache::file name)))
 
 (defun cache:renew (name)
   (delete-file (cache::file name)))

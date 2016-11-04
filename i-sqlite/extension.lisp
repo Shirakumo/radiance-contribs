@@ -41,7 +41,7 @@
    (loop for name in '("sqlite3-pcre" "pcre3" "pcre")
          for fqn = (format NIL "~a.~a" name #+windows "dll"
                                             #+unix "so")
-         appending (list name fqn (data-file fqn)))
+         appending (list name fqn))
    (list #+unix #p"/usr/lib/sqlite3/pcre.so"
          #+unix #p"/usr/local/lib/sqlite3/pcre.so"
          #+windows #p"C:/Windows/System32/sqlite3-pcre.dll"

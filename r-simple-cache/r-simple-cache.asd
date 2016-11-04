@@ -14,4 +14,5 @@
   :version "1.0.0"
   :description "Radiance cache interface implementation offering a convenient and simple disk-file-based caching mechanism."
   :components ((:file "cache"))
-  :depends-on (:uiop))
+  :depends-on (:uiop
+               :alexandria))

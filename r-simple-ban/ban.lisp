@@ -10,7 +10,7 @@
   (:implements #:ban))
 (in-package #:simple-ban)
 
-(defvar *ban-file* (data-file "bans.txt"))
+(defvar *ban-file* (mconfig-pathname #.*package* :txt))
 (defvar *bans* (make-hash-table :test 'equalp))
 
 (defun load-bans ()
