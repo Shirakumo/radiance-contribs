@@ -35,22 +35,25 @@
 (defun transform-body (body template)
   (if template
       `((let* ((lquery:*lquery-master-document*
-                 (lquery:load-page ,template)))
+                 (lquery:load-page ,(if (stringp template)
+                                        (template-file template *package*)
+                                        template))))
+          (setf (content-type *response*) "application/xhtml+xml; charset=utf-8")
           (handler-bind ((plump:invalid-xml-character #'abort))
             ,@body
             (lquery:$ (serialize) (node)))))
       body))
 
-(define-option radiance:page lquery (page body uri &optional template)
-  (if template
-      `((setf (content-type *response*) "application/xhtml+xml; charset=utf-8")
-        ,@(transform-body body template))
-      body))
-
-(define-option admin:panel lquery (name body category &optional template)
+(define-option radiance:page :lquery (name body uri &optional template)
+  (declare (ignore name uri))
   (transform-body body template))
 
-(define-option profile:panel lquery (name body &optional template)
+(define-option admin:panel :lquery (name body category &optional template)
+  (declare (ignore name category))
+  (transform-body body template))
+
+(define-option profile:panel :lquery (name body &optional template)
+  (declare (ignore name))
   (transform-body body template))
 
 (defun process-pattern (value node attribute)
