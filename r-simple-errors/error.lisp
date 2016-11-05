@@ -14,7 +14,7 @@
    (r-clip:process
     (plump:parse (@template template))
     :condition condition
-    :reason (or (when (typep condition 'radiance-error)
+    :reason (or (when (typep condition 'radiance-condition)
                   (message condition))
                 "Unfortunately, no detailed reason for this problem is available."))
    NIL))
