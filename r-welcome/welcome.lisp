@@ -9,7 +9,7 @@
     (:use #:cl #:radiance))
 (in-package #:welcome)
 
-(define-page welcome "/" (:lquery (template "index.ctml"))
+(define-page welcome "/" (:lquery (@template "index.ctml"))
   (r-clip:process T))
 
 (define-page not-found "/404" ()

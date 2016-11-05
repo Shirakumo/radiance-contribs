@@ -26,7 +26,7 @@
            fields)))
 
 (defmacro lquery-wrapper ((template &optional (content-type "application/xhtml+xml; charset=utf-8")) &body body)
-  `(let ((lquery:*lquery-master-document* (lquery:load-page (template ,template))))
+  `(let ((lquery:*lquery-master-document* (lquery:load-page (@template ,template))))
      (setf (content-type *response*) ,content-type)
      (handler-bind ((plump:invalid-xml-character #'abort))
        ,@body

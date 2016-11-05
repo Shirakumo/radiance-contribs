@@ -79,7 +79,7 @@
              (api-output "Logged out."))
       (error 'api-error :message "You are not logged in.")))
 
-(define-page login "auth/login" (:lquery (template "login.ctml"))
+(define-page login "auth/login" (:lquery (@template "login.ctml"))
   (r-clip:process
    T
    :user (auth:current)
@@ -115,7 +115,7 @@
   (redirect (or (session:field 'landing-page) "/")))
 
 (defvar *nonce-salt* (make-random-string))
-(define-page register "auth/register" (:lquery (template "register.ctml"))
+(define-page register "auth/register" (:lquery (@template "register.ctml"))
   (if (string-equal (config :registration) "open")
       (with-actions (error info)
           ((:register
@@ -145,7 +145,7 @@
 
 (user:add-default-permission '(auth change-password))
 (define-implement-hook admin
-  (admin:define-panel password settings (:access (perm auth change-password) :lquery (template "settings.ctml") :icon "fa-key" :tooltip "Change your login password.")
+  (admin:define-panel password settings (:access (perm auth change-password) :lquery (@template "settings.ctml") :icon "fa-key" :tooltip "Change your login password.")
     (let ((info) (error)
           (user (auth:current)))
       (handler-case

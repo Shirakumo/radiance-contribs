@@ -15,7 +15,7 @@
 (define-implement-hook admin
   (admin:define-panel overview admin (:access (perm radiance admin) :icon "fa-home" :tooltip "Radiance overview info.")
     (r-clip:process
-     (plump:parse (template "overview.ctml"))))
+     (plump:parse (@template "overview.ctml"))))
 
   (admin:define-panel modules admin (:access (perm radiance admin modules) :icon "fa-cube" :tooltip "Oversee active modules.")
     (let* ((action (post-var "action"))
@@ -33,7 +33,7 @@
             (setf error (princ-to-string err)))))
       
       (r-clip:process
-       (plump:parse (template "modules.ctml"))
+       (plump:parse (@template "modules.ctml"))
        :error error
        :info info
        :modules (remove-if #'interfaces:interface-p (modularize:list-modules)))))
@@ -62,7 +62,7 @@
           (setf error (princ-to-string err))))
       
       (r-clip:process
-       (plump:parse (template "systems.ctml"))
+       (plump:parse (@template "systems.ctml"))
        :error error
        :info info
        :systems (asdf:already-loaded-systems))))
@@ -85,7 +85,7 @@
           (setf error (princ-to-string err))))
       
       (r-clip:process
-       (plump:parse (template "dispatchers.ctml"))
+       (plump:parse (@template "dispatchers.ctml"))
        :error error
        :info info
        :dispatchers (list-uri-dispatchers)))))

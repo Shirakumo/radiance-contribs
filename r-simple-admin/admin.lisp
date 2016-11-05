@@ -92,7 +92,7 @@
                         (plump:serialize result s)))
           (array (lquery:$ result (serialize) (node))))))))
 
-(define-page admin-index "admin/([^/]*)(/(.+))?" (:uri-groups (category NIL panel) :access () :lquery (template "index.ctml"))
+(define-page admin-index "admin/([^/]*)(/(.+))?" (:uri-groups (category NIL panel) :access () :lquery (@template "index.ctml"))
   (let ((manage (post/get "simple-admin-manage"))
         (action (post-var "simple-admin-action")))
     (r-clip:process
@@ -101,7 +101,7 @@
      :categories *prepared-categories*
      :content (or (when (and manage (user:check (auth:current) (perm radiance admin)))
                     (cond ((not action)
-                           (plump:parse (template "confirm.ctml")))
+                           (plump:parse (@template "confirm.ctml")))
                           ((not (string-equal action "yes"))
                            NIL)
                           ((string= manage "shutdown")

@@ -12,7 +12,7 @@
 (defun process (template condition)
   (plump:serialize
    (r-clip:process
-    (plump:parse (template template))
+    (plump:parse (@template template))
     :condition condition
     :reason (or (when (typep condition 'radiance-error)
                   (message condition))

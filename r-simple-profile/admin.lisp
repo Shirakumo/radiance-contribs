@@ -9,7 +9,7 @@
 (user:add-default-permission '(profile change))
 
 (define-implement-hook admin
-  (admin:define-panel account settings (:access (perm profile change account) :lquery (template "account.ctml") :icon "fa-user" :tooltip "Change account information.")
+  (admin:define-panel account settings (:access (perm profile change account) :lquery (@template "account.ctml") :icon "fa-user" :tooltip "Change account information.")
     (let ((user (auth:current))
           (fields (dm:get 'simple-profile-fields (db:query (:= 'editable 1)))))
       (with-actions (error info)
@@ -33,7 +33,7 @@
          :user user
          :fields fields))))
 
-  (admin:define-panel profile settings (:access (perm profile change profile) :lquery (template "profile.ctml") :icon "fa-home" :tooltip "Configure your profile looks.")
+  (admin:define-panel profile settings (:access (perm profile change profile) :lquery (@template "profile.ctml") :icon "fa-home" :tooltip "Configure your profile looks.")
     (let ((user (auth:current)))
       (with-actions (error info)
           ((:save
@@ -51,7 +51,7 @@
          :info info :error error
          :user user))))
 
-  (admin:define-panel fields users (:access (perm radiance admin users fields) :lquery (template "fields.ctml") :icon "fa-list" :tooltip "Set user profile fields.")
+  (admin:define-panel fields users (:access (perm radiance admin users fields) :lquery (@template "fields.ctml") :icon "fa-list" :tooltip "Set user profile fields.")
     (with-actions (error info)
         ((:add
           (db:insert 'simple-profile-fields `((name . ,(post-var "name")) (type . ,(post-var "type")) (default . ,(post-var "default")) (editable . ,(or (post-var "editable") 0)))))

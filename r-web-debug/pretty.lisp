@@ -20,7 +20,7 @@
   (setf (content-type *response*) "application/xthml+xml")
   (plump:serialize
    (r-clip:process
-    (plump:parse (template "error.ctml"))
+    (plump:parse (@template "error.ctml"))
     :condition condition
     :stack (dissect::stack)
     :restarts (dissect::restarts)
