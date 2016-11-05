@@ -92,7 +92,7 @@
                         (plump:serialize result s)))
           (array (lquery:$ result (serialize) (node))))))))
 
-(define-page admin-index "admin/([^/]*)(/(.+))?" (:uri-groups (category NIL panel) :access () :lquery (@template "index.ctml"))
+(define-page admin-index "admin/([^/]*)(/(.+))?" (:uri-groups (category NIL panel) :access () :lquery "index.ctml")
   (let ((manage (post/get "simple-admin-manage"))
         (action (post-var "simple-admin-action")))
     (r-clip:process
