@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8"/>
     <title>Error</title>
-    <link rel="stylesheet" href="/static/pretty-errors/error.css" />
-    <link rel="stylesheet" href="/static/pretty-errors/github.css">
+    <link rel="stylesheet" @href="/static/pretty-errors/error.css" />
+    <link rel="stylesheet" @href="/static/pretty-errors/github.css">
   </head>
   <body>
     <header>
@@ -91,7 +91,7 @@
       </div>
     </main>
     <script src="https://code.jquery.com/jquery-1.11.0.min.js"></script>
-    <script src="/static/pretty-errors/highlight-lisp.js"></script>
-    <script src="/static/pretty-errors/error.js"></script>
+    <script @src="/static/pretty-errors/highlight-lisp.js"></script>
+    <script @src="/static/pretty-errors/error.js"></script>
   </body>
 </html>

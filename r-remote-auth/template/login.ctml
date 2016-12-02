@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8"/>
     <title>Login</title>
-    <link rel="stylesheet" type="text/css" href="/static/simple-auth/simple-auth.css" />
+    <link rel="stylesheet" type="text/css" @href="/static/simple-auth/simple-auth.css" />
   </head>
   <body>
     <c:if test="user">
@@ -13,7 +13,7 @@
       <c:else>
         <h1>Login</h1>
         <c:when test="msg"><div id="msg" lquery="(text msg)" /></c:when>
-        <form action="/api/simple-auth/login" method="post">
+        <form @action="/api/simple-auth/login" method="post">
           <label>Username</label><input type="text" name="username" autofocus required /><br />
           <label>Password</label><input type="password" name="password" required /><br />
           <input type="hidden" name="nonce" value="?" lquery="(val (make-random-string))" />
@@ -21,7 +21,7 @@
           <input type="submit" value="Submit" />
         </form>
         <c:when test='(string= (mconfig :remote-auth :registration) "open")'>
-          <a href="/register" id="register-link">Register an Account</a>
+          <a @href="/register" id="register-link">Register an Account</a>
         </c:when>
       </c:else>
     </c:if>

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8"/>
     <title lquery="(text (profile:name user))">USER</title>
-    <link rel="stylesheet" href="/static/simple-profile/profile.css" />
+    <link rel="stylesheet" @href="/static/simple-profile/profile.css" />
     <link href="//netdna.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.css" rel="stylesheet" />
   </head>
   <body>
@@ -35,6 +35,6 @@
       <span id="background" lquery="(text (user:field user :simple-profile-background))" />
     </div>
     <script src="https://code.jquery.com/jquery-1.11.0.min.js"></script>
-    <script src="/static/simple-profile/profile.js"></script>
+    <script @src="/static/simple-profile/profile.js"></script>
   </body>
 </html>
