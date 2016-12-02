@@ -14,7 +14,7 @@
 ;; subdomain ::= alphas | subst
 ;; port      ::= ":" (number | subst)
 ;; path      ::= (string | subst)*
-;; resource  ::= "<" target [":" name [";" args]] ">"
+;; resource  ::= "<" target [" " name [" " args]] ">"
 ;; target    ::= alphas
 ;; name      ::= alphas
 ;; args      ::= arg*
@@ -71,20 +71,20 @@
       (consume-until (make-matcher (not :alpha)))))
 
 (defun read-port ()
-  (when (char= (or (peek) #\ ) #\:)
+  (when (eql (peek) #\:)
     (advance) ;; skip beginning :
     (or (read-substitute)
         (consume-until (make-matcher (not :number))))))
 
 (defun read-path ()
-  (when (or (char= (or (peek) #\ ) #\/)
+  (when (or (eql (peek) #\/)
             (error "Path / expected."))
     (advance) ;; skip beginning /
     (loop for peek = (peek)
-          while peek
+          while (and peek (not (char= peek #\ )))
           collect (case peek
                     (#\{ (read-substitute))
-                    (T (consume-until (make-matcher (is #\{))))))))
+                    (T (consume-until (make-matcher (or (is #\{) (and (is #\ ) (prev (is #\\)))))))))))
 
 (defclass resource ()
   ((target :initarg :target :initform (error "TARGET required.") :accessor target)
@@ -96,7 +96,7 @@
     (apply #'resource (target resource) (name resource) (mapcar #'resolve (args resource)))))
 
 (defun read-resource ()
-  (when (char= (or (peek) #\ ) #\<)
+  (when (eql (peek) #\<)
     (advance) ;; skip opening <
     (let ((module (read-resource-target))
           (name (read-resource-name))
@@ -106,23 +106,23 @@
         (warn "No module or interface ~a known, but used as resource identifier in URI." module))
       (make-instance 'resource :target module :name (or* name :domain) :args args))))
 
-(defun read-resource-name ()
-  (when (char= (peek) #\:)
-    (advance)
-    (consume-until (make-matcher (any #\> #\;)))))
-
 (defun read-resource-target ()
-  (string-upcase (consume-until (make-matcher (any #\> #\:)))))
+  (string-upcase (consume-until (make-matcher (is #\ )))))
+
+(defun read-resource-name ()
+  (when (eql (peek) #\ )
+    (advance)
+    (consume-until (make-matcher (is #\ )))))
 
 (defun read-resource-args ()
-  (when (char= (peek) #\;)
+  (when (eql (peek) #\ )
     (advance)
     (loop for peek = (peek)
           until (or (not peek) (char= peek #\>))
-          do (when (char= peek #\,) (advance))
+          do (when (eql peek #\ ) (advance))
           collect (or (read-substitute)
                       (read-resource)
-                      (consume-until (make-matcher (any #\> #\,)))))))
+                      (consume-until (make-matcher (any #\> #\ )))))))
 
 (defclass placeholder ()
   ((var :initarg :var :initform (error "VAR required.") :accessor var)))
@@ -135,7 +135,7 @@
       (keyword (getf *args* var)))))
 
 (defun read-substitute ()
-  (when (char= (or (peek) #\ ) #\{)
+  (when (eql (peek) #\{)
     (advance) ;; skip opening {
     (let* ((contents (consume-until (make-matcher (is #\}))))
            (keyword (or (ignore-errors (parse-integer contents))
