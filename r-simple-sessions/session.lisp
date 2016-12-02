@@ -51,7 +51,7 @@
 (defun ensure-session (session)
   (etypecase session
     (session:session session)
-    (string (session:get session))
+    (string (gethash session *session-table*))
     (null (or (when (boundp '*request*)
                 (gethash 'session (data *request*)))
               (session:start)))))
