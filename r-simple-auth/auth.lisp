@@ -96,18 +96,16 @@
 
 (define-resource-locator auth page (page &optional landing)
   (cond ((string-equal page "login")
-         (make-uri :domains (list "auth")
-                   :path (format NIL "login?landing-page=~a"
-                                 (urlencode:urlencode
-                                  (etypecase landing
-                                    (null "")
-                                    (string
-                                     (if (string= landing "#")
-                                         (if (boundp '*request*)
-                                             (uri-to-url (uri *request*) :representation :external)
-                                             "REFERER")
-                                         args))
-                                    (uri (uri-to-url landing :representation :external)))))))
+         (values #@"auth/login"
+                 `(("landing-page" . ,(etypecase landing
+                                        (null "")
+                                        (string
+                                         (if (string= landing "#")
+                                             (if (boundp '*request*)
+                                                 (uri-to-url (uri *request*) :representation :external)
+                                                 "REFERER")
+                                             landing))
+                                        (uri (uri-to-url landing :representation :external)))))))
         (T (call-default-locator))))
 
 (define-page logout "auth/logout" ()
