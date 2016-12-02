@@ -56,22 +56,22 @@
 
 (defun db:connect (database-name)
   (with-simple-restart (skip "Skip connecting.")
-    (flet ((err (msg) (error 'db:connection-failed :database database-name :message msg)))
-      (let ((conn (config :connections database-name)))
-        (unless conn (err "No such connection found."))
-        (when lambdalite::*db*
-          (warn 'database-connection-already-open :database database-name)
-          (db:disconnect))
-        ;; Spec restarts for already open.
-        (l:info :database "Connecting ~a ~a" database-name conn)
-        (lambdalite:load-db
-         :path (merge-pathnames
-                (etypecase conn
-                  (pathname conn)
-                  (string (uiop:parse-native-namestring conn)))
-                (mconfig-pathname #.*package*)))
-        (setf *db-name* database-name)
-        (trigger 'db:connected database-name)))))
+    (let ((conn (config :connections database-name)))
+      (unless conn (error 'db:connection-failed :database database-name
+                                                :message "No such connection ~a found." database-name))
+      (when lambdalite::*db*
+        (warn 'database-connection-already-open :database database-name)
+        (db:disconnect))
+      ;; Spec restarts for already open.
+      (l:info :database "Connecting ~a ~a" database-name conn)
+      (lambdalite:load-db
+       :path (merge-pathnames
+              (etypecase conn
+                (pathname conn)
+                (string (uiop:parse-native-namestring conn)))
+              (mconfig-pathname #.*package*)))
+      (setf *db-name* database-name)
+      (trigger 'db:connected database-name))))
 
 (defun db:disconnect ()
   (let ((database-name *db-name*))
