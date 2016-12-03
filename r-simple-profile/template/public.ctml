@@ -13,10 +13,8 @@
         <h1 lquery="(text (profile:name user))">DISPLAYNAME</h1>
         <nav>
           <ul iterate="panels">
-            <li lquery="(add-class (when (string= name (** :panel-name)) &quot;active&quot;))">
-              <c:when test="(user:check (** :you) access)">
-                <a href="#" lquery="(text name) (attr :href (format nil &quot;/~a/~a&quot; (user:username (** :user)) name))">PANEL</a>
-              </c:when>
+            <li lquery='(add-class (when (string= name (** :panel-name)) "active"))'>
+              <a href="#" @href="/{0}/{1} (user:username (** :user)) name" lquery='(text name)'>PANEL</a>
             </li>
           </ul>
         </nav>

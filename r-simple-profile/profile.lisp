@@ -43,56 +43,56 @@
         (db:insert 'simple-profile-fields `((name . ,name) (type . ,type) (default . ,(or default "")) (editable . ,(if editable 1 0)))))
       name)))
 
-(defvar *panels* (make-hash-table :test 'equalp))
-(defvar *cached-panels* ())
+(defvar *panels* ())
 
-(defun generate-panel-cache ()
-  (setf *cached-panels*
-        (sort (loop for panel being the hash-values of *panels*
-                    collect panel)
-              #'string> :key #'(lambda (a) (clip:clip a :name)))))
+(defclass panel ()
+  ((name :initarg :name :accessor name)
+   (access :initarg :access :accessor access)
+   (function :initarg :func :accessor func)))
 
-(defun profile:panel (name)
-  (gethash (string name) *panels*))
+(defun profile::panel (name)
+  (cdr (assoc name *panels* :key #'name :test #'string=)))
 
-(defun (setf profile:panel) (function name)
-  (setf (gethash (string name) *panels*)
-        function)
-  (generate-panel-cache))
+(defun (setf profile::panel) (panel name)
+  (let ((cons (assoc name *panels* :key #'name :test #'string=)))
+    (if cons
+        (setf (cdr cons) panel)
+        (push panel *panels*)))
+  (setf *panels* (sort *panels* #'string> :key #'name))
+  panel)
 
 (defun profile:remove-panel (name)
-  (remhash (string name) *panels*)
-  (generate-panel-cache))
-
-(defvar *panel-options* (make-hash-table))
-
-(defun (setf panel-option) (function option)
-  (setf (gethash option *panel-options*) function))
+  (setf *panels* (remove name *panels* :key #'car :test #'string=))
+  name)
 
 (defmacro profile:define-panel (name options &body body)
-  (let ((name (string-downcase name)))
-    (destructuring-bind (&key access (user (gensym "USER")) &allow-other-keys) options
-      (multiple-value-bind (body forms) (expand-options 'profile:panel options name body)
-        (declare (ignore forms))
-        `(setf (profile:panel ,name)
-               (clip:make-clipboard
-                :name ,name
-                :access ,access
-                :function
-                #'(lambda (,user)
-                    (declare (ignorable ,user))
-                    ,@body)))))))
+  (let ((name (string-downcase name))
+        (access (getf options :access)))
+    (multiple-value-bind (body forms) (expand-options 'profile:panel options name body)
+      (declare (ignore forms))
+      `(setf (profile:panel ,name)
+             (make-instance 'panel
+                            :name ,name
+                            :access ,access
+                            :func (lambda (user-instance)
+                                    ,body))))))
+
+(define-option profile:panel :user (name body &optional var)
+  (declare (ignore name))
+  (if var
+      `((let ((,var user-instance))
+           ,@body))
+      body))
 
 (defun run-panel (panel user)
-  (let ((panel (profile:panel panel)))
-    (when panel
-      (let ((result (funcall (clip:clip panel :function) user)))
-        (etypecase result
-          (null "")
-          (string result)
-          (plump:node (with-output-to-string (s)
-                        (plump:serialize result s)))
-          (array (lquery:$ result (serialize) (node))))))))
+  (let ((panel (or (profile:panel panel)
+                   (error 'request-not-found :message "No such panel."))))
+    (let ((result (funcall (func panel) user)))
+      (etypecase result
+        (null "")
+        (string result)
+        (plump:node (plump:serialize result NIL))
+        (array (lquery:$ result (serialize) (node)))))))
 
 (define-page user-profile "user/([^/]+)?(/([^/]+))?" (:uri-groups (username NIL panel) :lquery "public.ctml")
   (let ((user (user:get username)))
@@ -101,7 +101,9 @@
          T
          :user user
          :you (or (auth:current) (user:get "anonymous"))
-         :panels *cached-panels*
+         :panels (loop for panel in *panels*
+                       when (user:check (session:get) (access panel))
+                       collect panel)
          :panel-name (or* panel "index")
          :panel (run-panel (or* panel "index") user))
         (error 'request-not-found :message "No such user."))))
