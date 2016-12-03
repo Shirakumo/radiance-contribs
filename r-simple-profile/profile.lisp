@@ -51,18 +51,15 @@
    (function :initarg :func :accessor func)))
 
 (defun profile::panel (name)
-  (cdr (assoc name *panels* :key #'name :test #'string=)))
+  (find name *panels* :key #'name :test #'string=))
 
 (defun (setf profile::panel) (panel name)
-  (let ((cons (assoc name *panels* :key #'name :test #'string=)))
-    (if cons
-        (setf (cdr cons) panel)
-        (push panel *panels*)))
-  (setf *panels* (sort *panels* #'string> :key #'name))
+  (profile:remove-panel name)
+  (setf *panels* (sort (list* panel *panels*) #'string> :key #'name))
   panel)
 
 (defun profile:remove-panel (name)
-  (setf *panels* (remove name *panels* :key #'car :test #'string=))
+  (setf *panels* (remove name *panels* :key #'name :test #'string=))
   name)
 
 (defmacro profile:define-panel (name options &body body)
@@ -75,7 +72,8 @@
                             :name ,name
                             :access ,access
                             :func (lambda (user-instance)
-                                    ,body))))))
+                                    (declare (ignorable user-instance))
+                                    ,@body))))))
 
 (define-option profile:panel :user (name body &optional var)
   (declare (ignore name))

@@ -6,8 +6,7 @@
 
 (in-package #:simple-profile)
 
-(define-implement-hook profile
-  (profile:define-panel index (:user user :lquery "panel-index.ctml")
-      (r-clip:process
-       T
-       :user user)))
+(profile:define-panel index (:user user :lquery "panel-index.ctml")
+  (r-clip:process
+   T
+   :user user))
