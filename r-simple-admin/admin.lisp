@@ -112,7 +112,7 @@
 (define-page admin-index "admin/([^/]*)(/(.+))?" (:uri-groups (category NIL panel) :access () :lquery "index.ctml")
   (let ((manage (post/get "simple-admin-manage"))
         (action (post-var "simple-admin-action")))
-    (unless category
+    (when (string= "" category)
       (setf category "admin" panel "overview"))
     (r-clip:process
      T
