@@ -99,7 +99,8 @@
         (:error (error 'db:collection-already-exists :collection collection :database *db-name*))
         (:supersede (db:drop collection))))
     (lambdalite:insert 'schemas `(:/name ,collection
-                                  :/structure ,structure
+                                  :/structure ,(loop for (name type) in structure
+                                                     collect (list (string name) type))
                                   :/indices ,indices))))
 
 (defun db:structure (collection)
