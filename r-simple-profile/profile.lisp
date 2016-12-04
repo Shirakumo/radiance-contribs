@@ -103,11 +103,11 @@
          :user user
          :you (or (auth:current) (user:get "anonymous"))
          :panels (loop for panel in *panels*
-                       when (user:check (session:get) (access panel))
+                       when (user:check (auth:current) (access panel))
                        collect panel)
          :panel-name (or* panel "index")
          :panel (run-panel (or* panel "index") user))
-        (error 'request-not-found :message "No such user."))))
+        (error 'request-not-found :message (format NIL "No such user~@[ ~a~]." username)))))
 
 (define-resource-locator user page (user &optional tab)
   (make-uri :domains (list "user") :path (format NIL "~(~a~)~@[/~(~a~)~]" (user:username user) tab)))
