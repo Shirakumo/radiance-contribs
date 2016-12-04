@@ -113,7 +113,7 @@
 (defun ensure-branch (branch)
   (etypecase branch
     (string (cl-ppcre:split "\\." branch))
-    (list branch)))
+    (list (mapcar #'string-downcase branch))))
 
 (defun branch-matches (permission branch)
   (when (<= (length permission) (length branch))
