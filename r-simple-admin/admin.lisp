@@ -11,94 +11,120 @@
   (:domain "admin"))
 (in-package #:simple-admin)
 
-(defvar *categories* (make-hash-table :test 'equalp))
-(defvar *prepared-categories* NIL)
+(defvar *panels* ())
 
-(defun prepare-categories ()
-  (setf *prepared-categories*
-        (loop for title being the hash-keys of *categories*
-              for panels being the hash-values of *categories*
-              collect (clip:make-clipboard
-                       :title title
-                       :panels (sort (loop for panel being the hash-values of panels
-                                           collect panel)
-                                     #'string< :key #'(lambda (a) (clip:clip a :title))))
-                into categories
-              finally (return (sort categories #'string< :key #'(lambda (a) (clip:clip a :title)))))))
+(defclass menu-entry ()
+  ((name :initarg :name :accessor name)
+   (icon :initarg :icon :accessor icon)
+   (tooltip :initarg :tooltip :accessor tooltip)
+   (access :initarg :access :accessor access))
+  (:default-initargs
+   :name (error "NAME required.")
+   :icon "fa-folder"
+   :tooltip ""
+   :access ()))
 
-(defun is-current (url)
-  (string-equal url (format NIL "/~a" (path (uri *request*)))))
+(defmethod print-object ((entry menu-entry) stream)
+  (print-unreadable-object (entry stream :type T)
+    (format stream "~a" (name entry))))
+
+(defclass category (menu-entry)
+  ((panels :initarg :panels :accessor panels))
+  (:default-initargs
+   :panels ()))
+
+(defmethod print-object ((category category) stream)
+  (print-unreadable-object (category stream :type T)
+    (format stream "~a ~a" (name category) (mapcar #'name (panels category)))))
+
+(defclass panel (menu-entry)
+  ((category :initarg :category :accessor category)
+   (func :initarg :func :accessor func))
+  (:default-initargs
+   :category (error "CATEGORY required.")
+   :func (error "FUNC required.")))
+
+(defmethod print-object ((panel panel) stream)
+  (print-unreadable-object (panel stream :type T)
+    (format stream "~a/~a" (category panel) (name panel))))
 
 (defun admin::category (category)
-  (gethash (string category) *categories*))
+  (find category *panels* :key #'name :test #'string=))
 
-(defun admin::add-category (category)
-  (setf (gethash (string category) *categories*)
-        (make-hash-table :test 'equalp)))
+(defun (setf admin::category) (category name)
+  (admin::remove-category name)
+  (setf *panels* (sort (list* category *panels*)
+                       #'string< :key #'name))
+  category)
 
 (defun admin::remove-category (category)
-  (remhash (string category) *categories*)
-  (prepare-categories))
+  (setf *panels* (remove category *panels* :key #'name :test #'string=))
+  category)
 
-(defun admin:panel (category name)
+(defun admin::panel (category name)
   (let ((category (admin::category category)))
     (when category
-      (gethash (string name) category))))
+      (find name (panels category) :key #'name :test #'string=))))
 
-(defun (setf admin:panel) (function category name)
-  (setf (gethash (string name)
-                 (or (admin::category category)
-                     (admin::add-category category)))
-        function)
-  (prepare-categories))
+(defun (setf admin::panel) (panel category name)
+  (let ((category (or (admin::category category)
+                      (setf (admin::category category) (make-instance 'category :name category)))))
+    (setf (panels category) (sort (list* panel (remove name (panels category) :key #'name :test #'string=))
+                                  #'string< :key #'name))
+    panel))
 
 (defun admin:remove-panel (category name)
-  (when (admin:panel category name)
-    (remhash (string name) (admin::category category))
-    (when (= 0 (hash-table-count (admin::category category)))
-      (admin::remove-category category))
-    (prepare-categories)))
-
-(defvar *panel-options* (make-hash-table))
-
-(defun (setf panel-option) (function option)
-  (setf (gethash option *panel-options*) function))
+  (let ((category (admin::category category)))
+    (when category
+      (setf (panels category) (remove name (panels category) :key #'name :test #'string=))
+      (unless (panels category)
+        (admin::remove-category category)))
+    name))
 
 (defmacro admin:define-panel (name category options &body body)
   (let ((name (string-downcase name))
-        (category (string-downcase category)))
-    (destructuring-bind (&key icon tooltip access &allow-other-keys) options
+        (category (string-downcase category))
+        (options (copy-list options)))
+    (destructuring-bind (&key (icon "") (tooltip "") (access ()) &allow-other-keys) options
+      (remf options :icon)
+      (remf options :tooltip)
       (multiple-value-bind (body forms) (expand-options 'admin:panel options name body category)
         (declare (ignore forms))
-        `(setf (admin:panel ,category ,name)
-               (clip:make-clipboard
-                :title ,(string name)
-                :url ,(format NIL "/~a/~a" category name)
-                :icon ,icon
-                :tooltip ,tooltip
-                :access ,access
-                :function
-                #'(lambda ()
-                    ,@body)))))))
+        `(setf (admin::panel ,category ,name)
+               (make-instance 'panel
+                              :name ,name
+                              :category ,category
+                              :icon ,icon
+                              :tooltip ,tooltip
+                              :access ,access
+                              :func (lambda () ,@body)))))))
 
 (defun run-panel (category panel)
-  (let ((panel (admin:panel category panel)))
+  (let ((panel (admin::panel category panel)))
     (when panel
-      (let ((result (funcall (clip:clip panel :function))))
+      (let ((result (funcall (func panel))))
         (etypecase result
           (null "")
           (string result)
-          (plump:node (with-output-to-string (s)
-                        (plump:serialize result s)))
+          (plump:node (plump:serialize result NIL))
           (array (lquery:$ result (serialize) (node))))))))
 
 (define-page admin-index "admin/([^/]*)(/(.+))?" (:uri-groups (category NIL panel) :access () :lquery "index.ctml")
   (let ((manage (post/get "simple-admin-manage"))
         (action (post-var "simple-admin-action")))
+    (unless category
+      (setf category "admin" panel "overview"))
     (r-clip:process
      T
      :manage manage
-     :categories *prepared-categories*
+     :category category
+     :panel panel
+     :panels (loop for category in *panels*
+                   when (user:check (auth:current) (access category))
+                   collect `(:name ,(name category)
+                             :panels ,(loop for panel in (panels category)
+                                            when (user:check (auth:current) (access panel))
+                                            collect panel)))
      :content (or (when (and manage (user:check (auth:current) (perm radiance admin)))
                     (cond ((not action)
                            (plump:parse (@template "confirm.ctml")))

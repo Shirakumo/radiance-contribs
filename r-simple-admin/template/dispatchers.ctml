@@ -18,7 +18,7 @@
         <tr>
 	  <td><input type="checkbox" name="selected[]" form="massEditForm" lquery="(val (simple-admin::print-symbol (name *)))" /></td>
           <td lquery="(text (simple-admin::print-symbol (name *)))" style="white-space: nowrap;"></td>
-          <td lquery="(text *)" style="white-space: nowrap;"></td>
+          <td lquery="(text (uri-string *))" style="white-space: nowrap;"></td>
           <td lquery="(text (priority *))"></td>
           <td lquery="(text (dispatch-function *))"></td>
 	  <td>

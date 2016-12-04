@@ -9,20 +9,18 @@
   <body>
     <div id="panel">
       <h1><i class="fa fa-gear"></i>Admin</h1>
-      <ul id="menu" iterate="categories">
-        <li>
-          <a lquery="(text title)">
-            <i class="fa fa-fw" lquery="(add-class (or icon &quot;fa-folder&quot;))"></i>
+      <ul id="menu" iterate="panels">
+        <li lquery='(add-class (if (string= (** :category) name) "active" "inactive"))'>
+          <a lquery="(text name)">
+            <i class="fa fa-fw" lquery='(add-class icon)'></i>
             CATEGORY
           </a>
           <ul iterate="panels">
-            <li lquery="(add-class (or (when (simple-admin::is-current url) &quot;active&quot;) &quot;inactive&quot;))">
-              <c:when test="(user:check (auth:current) access)">
-                <a href="#" lquery="(attr :href url :title tooltip) (text title)">
-                  <i class="fa fa-fw" lquery="(add-class icon)"></i>
-                  PANEL
-                </a>
-              </c:when>
+            <li lquery='(add-class (if (string= (*** :panel) name) "active" "inactive"))'>
+              <a href="#" @href="admin/{0}/{1} category name" lquery="(attr :title tooltip) (text name)">
+                <i class="fa fa-fw" lquery="(add-class icon)"></i>
+                PANEL
+              </a>
             </li>
           </ul>
         </li>
