@@ -86,7 +86,7 @@
 (defun (setf session:field) (value session/field &optional (field NIL field-p))
   (if field-p
       (setf (gethash field (fields (ensure-session session/field))) value)
-      (setf (gethash session/field (fiels (ensure-session NIL))) value)))
+      (setf (gethash session/field (fields (ensure-session NIL))) value)))
 
 (defun session:timeout (&optional session)
   (timeout (ensure-session session)))
