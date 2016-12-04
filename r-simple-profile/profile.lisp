@@ -109,5 +109,5 @@
          :panel (run-panel (or* panel "index") user))
         (error 'request-not-found :message (format NIL "No such user~@[ ~a~]." username)))))
 
-(define-resource-locator user page (user &optional tab)
+(define-resource-locator profile page (user &optional tab)
   (make-uri :domains (list "user") :path (format NIL "~(~a~)~@[/~(~a~)~]" (user:username user) tab)))
