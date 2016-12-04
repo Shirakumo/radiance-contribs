@@ -62,6 +62,9 @@
   (setf *panels* (remove name *panels* :key #'name :test #'string=))
   name)
 
+(defun profile:list-panels ()
+  (mapcar #'name *panels*))
+
 (defmacro profile:define-panel (name options &body body)
   (let ((name (string-downcase name))
         (access (getf options :access)))
