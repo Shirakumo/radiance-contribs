@@ -153,7 +153,7 @@
                       for row in (sort-by-specs (lambdalite:select (ensure-collection collection) query) sort)
                       while (or (not amount)
                                 (< i (+ skip amount)))
-                      when (<= i skip)
+                      when (<= skip i)
                       collect row)))
       (if accumulate
           (mapcar #'row-processor data)
