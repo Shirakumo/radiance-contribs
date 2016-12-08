@@ -8,12 +8,20 @@
 
 (defvar *db-name* NIL)
 
-(defun make-row-id ()
+(defun make-row-id (collection)
   (lambdalite:with-tx
-    (or (and (lambdalite:update 'rowid (constantly T) (lambda (row) (incf (getf row :/id)) row))
-             (getf (lambdalite:select1 'rowid) :/id))
-        (and (lambdalite:insert 'rowid '(:/id 0))
-             0))))
+    (let ((id))
+      (lambdalite:update
+       :__rowid
+       (lambda (row) (string= collection (getf row :/collection)))
+       (lambda (row) (setf id (incf (getf row :/id))) row))
+      (unless id
+        (setf id 0)
+        (lambdalite:insert
+         :__rowid
+         `(:/collection ,(string collection)
+           :/id ,id)))
+      id)))
 
 (defun ensure-collection (thing)
   (typecase thing
@@ -167,7 +175,7 @@
   (length (db:select collection query :fields '(:_id))))
 
 (defun db:insert (collection data)
-  (let* ((id (make-row-id))
+  (let* ((id (make-row-id collection))
          (list (list :/_id id)))
     (etypecase data
       (hash-table
