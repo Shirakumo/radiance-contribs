@@ -92,7 +92,8 @@
                                do (case char
                                     ,@clauses
                                     (#\\ (write-char (read-char in) buf))
-                                    (#\{ (princ (read-arg in args) buf))
+                                    (#\{ (let ((arg (read-arg in args)))
+                                           (when arg (princ arg buf))))
                                     (T (write-char char buf))))
                       ,finally)))
         (tagbody
