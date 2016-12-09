@@ -149,9 +149,10 @@
     (save-perms user)
     user))
 
-(defun user:add-default-permission (branch)
-  (pushnew (ensure-branch branch) *default-permissions*
-           :test #'branch-equal))
+(defun user:add-default-permissions (&rest branches)
+  (dolist (branch branches)
+    (pushnew (ensure-branch branch) *default-permissions*
+             :test #'branch-equal)))
 
 (defun user:action (user action public)
   (let ((user (ensure-user user)))
