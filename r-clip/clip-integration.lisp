@@ -17,13 +17,17 @@
 
 (defun process (target &rest fields)
   (let ((*package* (find-package "RADIANCE-CLIP")))
-    (apply #'clip:process
-           (etypecase target 
-             ((eql T) lquery:*lquery-master-document*)
-             (pathname (plump:parse target))
-             (string (plump:parse target))
-             (plump:node target))
-           fields)))
+    (setf lquery:*lquery-master-document*
+          (apply #'clip:process
+                 (etypecase target 
+                   ((eql T) lquery:*lquery-master-document*)
+                   (pathname (plump:parse target))
+                   (string (plump:parse target))
+                   (plump:node target))
+                 fields))))
+
+(defmacro switch-template (template)
+  `(setf lquery:*lquery-master-document* (lquery:load-page (@template ,template))))
 
 (defmacro lquery-wrapper ((template &optional (content-type "application/xhtml+xml; charset=utf-8")) &body body)
   `(let ((lquery:*lquery-master-document* (lquery:load-page (@template ,template))))

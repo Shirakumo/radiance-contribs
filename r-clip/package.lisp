@@ -7,7 +7,7 @@
 (in-package #:modularize-user)
 (define-module #:r-clip
   (:use #:cl #:radiance #:plump-lexer)
-  (:export #:process #:lquery-wrapper))
+  (:export #:process #:lquery-wrapper #:switch-template))
 (in-package #:r-clip)
 
 (defpackage #:radiance-clip
