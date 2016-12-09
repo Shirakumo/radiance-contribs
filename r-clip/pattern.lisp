@@ -117,6 +117,7 @@
            (with-parsing (setf key (get-output-stream-string buf))
              ((NIL) (go read-value))
              (#\# (go read-fragment))
+             (#\& (unread-char #\& in) (go read-value))
              (#\= (go read-value)))
          read-value
            (with-parsing (push (cons key (get-output-stream-string buf)) query)
