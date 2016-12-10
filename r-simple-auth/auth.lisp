@@ -141,7 +141,9 @@
            :nonce nonce)))
       (r-clip:process T)))
 
-(user:add-default-permission '(auth change-password))
+(define-trigger user:ready ()
+  (user:add-default-permissions (perm auth change-password)))
+
 (define-implement-hook admin
   (admin:define-panel password settings (:access (perm auth change-password) :lquery "settings.ctml" :icon "fa-key" :tooltip "Change your login password.")
     (let ((info) (error)
