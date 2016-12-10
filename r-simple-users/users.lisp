@@ -31,10 +31,8 @@
     (format stream "USER ~a~:[~; *~]" (username user) (modified user))))
 
 (defmethod initialize-instance :after ((user user) &key)
-  (dolist (branch *default-permissions*)
-    (push branch (perms user)))
-  (save-perms user)
-  (setf (gethash (username user) *user-cache*) user))
+  (setf (gethash (username user) *user-cache*) user)
+  (apply #'user:grant user *default-permissions*))
 
 (defun ensure-user (thing)
   (etypecase thing
@@ -108,7 +106,8 @@
 
 (defun save-perms (user)
   (db:update 'simple-users (db:query (:= '_id (id user)))
-             `((permissions . ,(format NIL "~{~{~a~^.~}~^~%~}" (perms user))))))
+             `((permissions . ,(format NIL "~{~{~a~^.~}~^~%~}" (perms user)))))
+  user)
 
 (defun ensure-branch (branch)
   (etypecase branch
@@ -132,22 +131,22 @@
         (loop for perm in (perms user)
                 thereis (branch-matches perm branch)))))
 
-(defun user:grant (user branch)
-  (let ((user (ensure-user user))
-        (branch (ensure-branch branch)))
-    (l:debug :users "Granting ~s to ~a." branch user)
-    (pushnew branch (perms user) :test #'branch-equal)
-    (save-perms user)
-    user))
+(defun user:grant (user &rest branch)
+  (let ((user (ensure-user user)))
+    (dolist (branch branches)
+      (let ((branch (branch (ensure-branch branch))))
+        (l:debug :users "Granting ~s to ~a." branch user)
+        (pushnew branch (perms user) :test #'branch-equal)))
+    (save-perms user)))
 
-(defun user:prohibit (user branch)
-  (let ((user (ensure-user user))
-        (branch (ensure-branch branch)))
-    (l:debug :users "Prohibiting ~s from ~a." branch user)
-    (setf (perms user)
-          (remove-if #'(lambda (perm) (branch-matches perm branch)) (perms user)))
-    (save-perms user)
-    user))
+(defun user:revoke (user &rest branches)
+  (let ((user (ensure-user user)))
+    (dolist (branch branches)
+      (let ((branch (branch (ensure-branch branch))))
+        (l:debug :users "Revoking ~s from ~a." branch user)
+        (setf (perms user)
+              (remove-if (lambda (perm) (branch-matches perm branch)) (perms user)))))
+    (save-perms user)))
 
 (defun user:add-default-permissions (&rest branches)
   (dolist (branch branches)
