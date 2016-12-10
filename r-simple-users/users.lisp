@@ -20,6 +20,9 @@
   (user::sync)
   (trigger 'user:ready))
 
+(define-trigger db:disconnected ()
+  (trigger 'user:unready))
+
 (defclass user (user:user)
   ((username :initarg :username :initform (error "USERNAME required.") :accessor username)
    (id :initarg :id :initform (error "ID required.") :accessor id)
