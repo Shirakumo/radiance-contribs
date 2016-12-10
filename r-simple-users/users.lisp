@@ -30,9 +30,10 @@
   (print-unreadable-object (user stream)
     (format stream "USER ~a~:[~; *~]" (username user) (modified user))))
 
-(defmethod initialize-instance :after ((user user) &key)
-  (setf (gethash (username user) *user-cache*) user)
-  (apply #'user:grant user *default-permissions*))
+(defmethod initialize-instance :after ((user user) &key username)
+  (setf (gethash username *user-cache*) user)
+  (unless (string= "anonymous" username)
+    (apply #'user:grant user *default-permissions*)))
 
 (defun ensure-user (thing)
   (etypecase thing
