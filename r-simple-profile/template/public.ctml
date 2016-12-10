@@ -14,7 +14,7 @@
         <nav>
           <ul iterate="panels">
             <li lquery='(add-class (when (string= name (** :panel-name)) "active"))'>
-              <a href="#" @href="/{0}/{1} (user:username (** :user)) name" lquery='(text name)'>PANEL</a>
+              <a href="#" @href="user/{0}/{1} (user:username (** :user)) name" lquery='(text name)'>PANEL</a>
             </li>
           </ul>
         </nav>
