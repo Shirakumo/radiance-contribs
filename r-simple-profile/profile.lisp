@@ -103,7 +103,8 @@
          :user user
          :you (or (auth:current) (user:get "anonymous"))
          :panels (loop for panel in *panels*
-                       when (user:check (auth:current) (access panel))
+                       when (user:check (or (auth:current) (user:get "anonymous"))
+                                        (access panel))
                        collect panel)
          :panel-name (or* panel "index")
          :panel (run-panel (or* panel "index") user))
