@@ -48,6 +48,7 @@
             (lquery:$ (serialize) (node)))))
       body))
 
+;; FIXME: Maybe find a less confusing name than :lquery?
 (define-option radiance:page :lquery (name body uri &optional template)
   (declare (ignore name uri))
   (transform-body body template))
