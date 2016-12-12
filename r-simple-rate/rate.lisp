@@ -43,7 +43,7 @@
   (setf (gethash name *rates*)
         rate))
 
-(defmacro rate:define-rate (name (time-left &key (timeout 60) (limit 1)) &body on-limit-exceeded)
+(defmacro rate:define-limit (name (time-left &key (timeout 60) (limit 1)) &body on-limit-exceeded)
   `(eval-when (:compile-toplevel :load-toplevel :execute)
      (setf (rate ',name)
            (make-instance
@@ -53,7 +53,7 @@
             :timeout ,timeout
             :exceeded #'(lambda (,time-left) ,@on-limit-exceeded)))))
 
-(defun rate:rate-left (rate &key (ip (remote *request*)))
+(defun rate:left (rate &key (ip (remote *request*)))
   (let* ((rate (rate rate))
          (limit (dm:get-one 'simple-rates (db:query (:and (:= 'rate (name rate))
                                                           (:= 'ip ip))))))
@@ -86,11 +86,11 @@
                                      (limit . ,(limit rate))
                                      (ip . ,ip)))))))
 
-(defmacro rate:with-rate-limitation ((rate) &body body)
+(defmacro rate:with-limitation ((rate) &body body)
   (assert (rate rate) () "No such rate ~s." rate)
   (let ((amount (gensym "AMOUNT"))
         (timeout (gensym "TIMEOUT")))
-    `(multiple-value-bind (,amount ,timeout) (rate:rate-left ',rate)
+    `(multiple-value-bind (,amount ,timeout) (rate:left ',rate)
        (if (and (<= ,amount 0) (< 0 ,timeout))
            (funcall (exceeded (rate ',rate)) ,timeout)
            (progn
