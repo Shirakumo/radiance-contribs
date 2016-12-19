@@ -144,7 +144,7 @@
 (define-trigger user:ready ()
   (user:add-default-permissions (perm auth change-password)))
 
-(define-implement-hook admin
+(define-implement-trigger admin
   (admin:define-panel password settings (:access (perm auth change-password) :lquery "settings.ctml" :icon "fa-key" :tooltip "Change your login password.")
     (let ((info) (error)
           (user (auth:current)))

@@ -70,7 +70,7 @@
                                                   (when (integerp limit) (format-time limit))))
           (ban:release (remote request))))))
 
-(define-implement-hook admin
+(define-implement-trigger admin
   (admin:define-panel bans admin (:access (perm radiance admin bans) :icon "fa-ban" :tooltip "Manage banned IP addresses." :lquery "bans.ctml")
     (with-actions (error info)
         ((:release

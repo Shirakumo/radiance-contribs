@@ -9,7 +9,7 @@
 (define-trigger user:ready ()
   (user:add-default-permissions (perm profile change)))
 
-(define-implement-hook admin
+(define-implement-trigger admin
   (admin:define-panel account settings (:access (perm profile change account) :lquery "account.ctml" :icon "fa-user" :tooltip "Change account information.")
     (let ((user (auth:current))
           (fields (dm:get 'simple-profile-fields (db:query (:= 'editable 1)))))
