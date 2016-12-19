@@ -7,7 +7,7 @@
 (in-package #:cl-user)
 (asdf:defsystem #:r-simple-model
   :defsystem-depends-on (:radiance)
-  :class "radiance:module"
+  :class "radiance:virtual-module"
   :module-name "SIMPLE-MODEL"
   :author "Nicolas Hafner <shinmera@tymoon.eu>"
   :maintainer "Nicolas Hafner <shinmera@tymoon.eu>"

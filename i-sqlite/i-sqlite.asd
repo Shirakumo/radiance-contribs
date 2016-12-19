@@ -7,7 +7,7 @@
 (in-package #:cl-user)
 (asdf:defsystem #:i-sqlite
   :defsystem-depends-on (:radiance)
-  :class "radiance:module"
+  :class "radiance:virtual-module"
   :author "Nicolas Hafner <shinmera@tymoon.eu>"
   :maintainer "Nicolas Hafner <shinmera@tymoon.eu>"
   :version "1.0.0"

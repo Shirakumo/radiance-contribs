@@ -7,7 +7,7 @@
 (in-package #:cl-user)
 (asdf:defsystem #:r-simple-errors
   :defsystem-depends-on (:radiance)
-  :class "radiance:module"
+  :class "radiance:virtual-module"
   :module-name "SIMPLE-ERRORS"
   :author "Nicolas Hafner <shinmera@tymoon.eu>"
   :maintainer "Nicolas Hafner <shinmera@tymoon.eu>"
