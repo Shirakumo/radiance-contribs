@@ -109,7 +109,7 @@
           (plump:node (plump:serialize result NIL))
           (array (lquery:$ result (serialize) (node))))))))
 
-(define-page admin-index "admin/([^/]*)(/(.+))?" (:uri-groups (category NIL panel) :access () :lquery "index.ctml")
+(define-page admin-index "admin/([^/]*)(/(.+))?" (:uri-groups (category NIL panel) :access () :clip "index.ctml")
   (let ((manage (post/get "simple-admin-manage"))
         (action (post-var "simple-admin-action")))
     (when (string= "" category)

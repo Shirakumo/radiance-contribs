@@ -71,7 +71,7 @@
           (ban:release (remote request))))))
 
 (define-implement-trigger admin
-  (admin:define-panel bans admin (:access (perm radiance admin bans) :icon "fa-ban" :tooltip "Manage banned IP addresses." :lquery "bans.ctml")
+  (admin:define-panel bans admin (:access (perm radiance admin bans) :icon "fa-ban" :tooltip "Manage banned IP addresses." :clip "bans.ctml")
     (with-actions (error info)
         ((:release
           (dolist (ip (or (post/get "selected[]") (list (post/get "ip"))))

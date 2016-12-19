@@ -95,7 +95,7 @@
         (plump:node (plump:serialize result NIL))
         (array (lquery:$ result (serialize) (node)))))))
 
-(define-page user-profile "user/([^/]+)?(/([^/]+))?" (:uri-groups (username NIL panel) :lquery "public.ctml")
+(define-page user-profile "user/([^/]+)?(/([^/]+))?" (:uri-groups (username NIL panel) :clip "public.ctml")
   (let ((user (user:get username)))
     (if user
         (r-clip:process

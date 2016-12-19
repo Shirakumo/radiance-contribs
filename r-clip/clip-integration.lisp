@@ -6,6 +6,8 @@
 
 (in-package #:r-clip)
 
+(defvar *document*)
+
 (defun radiance-clip::or* (&rest vals)
   (loop for val in vals
         thereis (if (stringp val)
@@ -26,38 +28,34 @@
                    (plump:node target))
                  fields))))
 
-(defmacro switch-template (template)
-  `(setf lquery:*lquery-master-document* (lquery:load-page (@template ,template))))
-
-(defmacro lquery-wrapper ((template &optional (content-type "application/xhtml+xml; charset=utf-8")) &body body)
-  `(let ((lquery:*lquery-master-document* (lquery:load-page (@template ,template))))
+(defmacro with-clip-processing ((template &optional (content-type "application/xhtml+xml; charset=utf-8")) &body body)
+  `(let ((*document* (plump:parse ,(if (stringp template)
+                                       `(@template ,template)
+                                       template))))
      (setf (content-type *response*) ,content-type)
-     (handler-bind ((plump:invalid-xml-character #'abort))
+     (handler-bind ((plump:invalid-xml-character #'abort)
+                    (plump:discouraged-xml-character #'muffle-condition))
        ,@body
-       (lquery:$ (serialize) (node)))))
+       (plump:serialize *document*))))
+
+(defmacro switch-template (template)
+  `(setf *document* (lquery:load-page (@template ,template))))
 
 (defun transform-body (body template)
   (if template
-      `((let* ((lquery:*lquery-master-document*
-                 (lquery:load-page ,(if (stringp template)
-                                        (template-file template *package*)
-                                        template))))
-          (setf (content-type *response*) "application/xhtml+xml; charset=utf-8")
-          (handler-bind ((plump:invalid-xml-character #'abort))
-            ,@body
-            (lquery:$ (serialize) (node)))))
+      `((with-clip-processing (,template)
+          ,@body))
       body))
 
-;; FIXME: Maybe find a less confusing name than :lquery?
-(define-option radiance:page :lquery (name body uri &optional template)
+(define-option radiance:page :clip (name body uri &optional template)
   (declare (ignore name uri))
   (transform-body body template))
 
-(define-option admin:panel :lquery (name body category &optional template)
+(define-option admin:panel :clip (name body category &optional template)
   (declare (ignore name category))
   (transform-body body template))
 
-(define-option profile:panel :lquery (name body &optional template)
+(define-option profile:panel :clip (name body &optional template)
   (declare (ignore name))
   (transform-body body template))
 
