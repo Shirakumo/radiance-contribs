@@ -112,22 +112,43 @@
 
 (defun db:collections ()
   (loop for row in (lambdalite:select 'schemas)
-        collect (getf row :/name)))
+        collect (string (getf row :/name))))
 
 (defun db:collection-exists-p (collection)
   (not (null (lambdalite:select 'schemas (lambdalite:where (eql :/name (ensure-collection collection)))))))
 
+(defun check-field-type (field type)
+  (unless (typecase type
+            ((eql :id) T)
+            ((eql :integer) T)
+            ((eql :float) T)
+            ((eql :character) T)
+            ((eql :text) T)
+            (cons (case (first type)
+                    (:integer (typep (second type) '(integer 1 8)))
+                    (:varchar (typep (second type) '(integer 1))))))
+    (error 'db:invalid-field :field field)))
+
+(defun check-field-name (field)
+  (unless (typecase field
+            (string (valid-name-p field))
+            (symbol (valid-name-p (string field))))
+    (error 'db:invalid-field :field field)))
+
 (defun db:create (collection structure &key indices (if-exists :ignore))
-  (let ((collection (ensure-collection collection)))
-    (when (find collection (db:collections))
-      (ecase if-exists
-        (:ignore (return-from db:create))
-        (:error (error 'db:collection-already-exists :collection collection :database *db-name*))
-        (:supersede (db:drop collection))))
-    (lambdalite:insert 'schemas `(:/name ,collection
-                                  :/structure ,(loop for (name type) in structure
-                                                     collect (list (string name) type))
-                                  :/indices ,indices))))
+  (loop for (name type) in structure
+        do (check-field-name name)
+           (check-field-type name type))
+  (when (db:structure collection)
+    (ecase if-exists
+      (:ignore (return-from db:create NIL))
+      (:error (error 'db:collection-already-exists :collection collection :database *db-name*))
+      (:supersede (db:drop collection))))
+  (lambdalite:insert 'schemas `(:/name ,(ensure-collection collection)
+                                :/structure ,(loop for (name type) in structure
+                                                   collect (list (string name) type))
+                                :/indices ,indices))
+  T)
 
 (defun db:structure (collection)
   (lambdalite:select1 'schemas (lambdalite:where (eql :/name (ensure-collection collection)))))
@@ -136,6 +157,8 @@
   (lambdalite:del (ensure-collection collection) (constantly T)))
 
 (defun db:drop (collection)
+  (unless (db:structure collection)
+    (error 'db:invalid-collection :collection collection))
   (let ((collection (ensure-collection collection)))
     (lambdalite:del 'schemas (lambdalite:where (eql :/name collection)))
     (lambdalite::with-lock
@@ -187,7 +210,8 @@
           (map NIL #'row-processor data)))))
 
 (defun db:select (collection query &key fields (skip 0) amount sort)
-  (db:iterate collection query #'identity :fields fields :skip skip :amount amount :accumulate T))
+  (db:iterate collection query #'identity
+              :fields fields :skip skip :amount amount :sort sort :accumulate T))
 
 (defun db:count (collection query)
   (length (db:select collection query :fields '(:_id))))
