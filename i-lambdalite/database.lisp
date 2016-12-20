@@ -26,7 +26,10 @@
 (defun ensure-collection (thing)
   (typecase thing
     (keyword thing)
-    (T (intern (string-upcase thing) "KEYWORD"))))
+    (string (intern thing :keyword))
+    (symbol (ensure-collection
+             (format NIL "~a/~a"
+                     (symbol-package thing) (symbol-name thing))))))
 
 (defun ensure-field (thing)
   (typecase thing
@@ -57,18 +60,27 @@
 
 (define-trigger startup-done ()
   (defaulted-config "radiance.db" :connections "radiance")
+  (defaulted-config "test.db" :connections "test")
   (db:connect (defaulted-config "radiance" :default)))
 
 (define-trigger server-stop ()
   (db:disconnect))
 
+(deftype db:id ()
+  '(integer 0))
+
+(defun db:ensure-id (id-ish)
+  (etypecase id-ish
+    (integer id-ish)
+    (string (parse-integer id-ish))))
+
 (defun db:connect (database-name)
   (with-simple-restart (skip "Skip connecting.")
     (let ((conn (config :connections database-name)))
       (unless conn (error 'db:connection-failed :database database-name
-                                                :message "No such connection ~a found." database-name))
+                                                :message "No such connection found."))
       (when lambdalite::*db*
-        (warn 'database-connection-already-open :database database-name)
+        (warn 'db:connection-already-open :database database-name)
         (db:disconnect))
       ;; Spec restarts for already open.
       (l:info :database "Connecting ~a ~a" database-name conn)
