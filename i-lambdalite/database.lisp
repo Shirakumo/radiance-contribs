@@ -12,24 +12,30 @@
   (lambdalite:with-tx
     (let ((id))
       (lambdalite:update
-       :__rowid
+       'rowid
        (lambda (row) (string= collection (getf row :/collection)))
        (lambda (row) (setf id (incf (getf row :/id))) row))
       (unless id
         (setf id 0)
         (lambdalite:insert
-         :__rowid
+         'rowid
          `(:/collection ,(string collection)
            :/id ,id)))
       id)))
 
+(defun valid-name-p (name)
+  (loop for char across name
+        always (find char "-_/abcdefghijklmnopqrstuvwxyz0123456789" :test #'char-equal)))
+
 (defun ensure-collection (thing)
   (typecase thing
-    (keyword thing)
-    (string (intern thing :keyword))
+    (string
+     (unless (valid-name-p thing)
+       (error 'db:invalid-collection :collection thing))
+     (intern thing :keyword))
     (symbol (ensure-collection
              (format NIL "~a/~a"
-                     (symbol-package thing) (symbol-name thing))))))
+                     (package-name (symbol-package thing)) (symbol-name thing))))))
 
 (defun ensure-field (thing)
   (typecase thing

@@ -23,12 +23,13 @@
                                       :message (cl-postgres-error::database-error-message err)))))))
 
 (defun valid-name-p (name)
-  (loop for char across (string-downcase name)
-        always (or (alpha-char-p char) (char= char #\_) (char= char #\-))))
+  (loop for char across name
+        always (find char "-_/abcdefghijklmnopqrstuvwxyz0123456789" :test #'char-equal)))
 
 (defun ensure-collection-name (collection &optional check-exists)
   (let ((string (etypecase collection
-                  (symbol (format NIL "~a/~a" collection))
+                  (symbol (format NIL "~a/~a"
+                                  (package-name (symbol-package thing)) (symbol-name thing)))
                   (string collection))))
     (unless (valid-name-p string)
       (error 'invalid-collection :database *current-db*

@@ -20,13 +20,14 @@
        ,@body)))
 
 (defun valid-name-p (name)
-  (loop for char across (string-downcase name)
-        always (or (alpha-char-p char) (char= char #\_) (char= char #\-))))
+  (loop for char across name
+        always (find char "-_/abcdefghijklmnopqrstuvwxyz0123456789" :test #'char-equal)))
 
 (defun ensure-collection-name (name &optional check-exists)
   (let ((string (etypecase name
                   (string name)
-                  (symbol (format NIL "~a/~a" (symbol-package name) (symbol-name name))))))
+                  (symbol (format NIL "~a/~a"
+                                  (package-name (symbol-package thing)) (symbol-name thing))))))
     (unless (valid-name-p collection)
       (error 'database-invalid-collection :collection collection :message "Invalid name, only a-z, - and _ are allowed."))
     (when check-exists
