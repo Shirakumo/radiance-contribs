@@ -39,7 +39,7 @@
   (load-bans))
 
 (defun ban:jail (ip &key (duration T))
-  (v:info :ban "Jailing ~a for ~a" ip duration)
+  (l:info :ban "Jailing ~a for ~a" ip duration)
   (setf (gethash ip *bans*)
         (if (integerp duration)
             (+ (get-universal-time) duration)
@@ -56,7 +56,7 @@
   (gethash ip *bans*))
 
 (defun ban:release (ip)
-  (v:info :ban "Releasing ~a" ip)
+  (l:info :ban "Releasing ~a" ip)
   (remhash ip *bans*)
   (save-bans)
   ip)

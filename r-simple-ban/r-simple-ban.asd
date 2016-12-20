@@ -14,4 +14,4 @@
   :version "1.0.0"
   :description "Radiance ban interface implementation offering a simple banning mechanism."
   :components ((:file "ban"))
-  :depends-on ())
+  :depends-on (:r-clip))
