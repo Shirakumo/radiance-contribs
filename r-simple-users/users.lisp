@@ -173,7 +173,7 @@
       :fields '(action) :amount n :sort `((time ,(if oldest-first :ASC :DESC))) :accumulate T)))
 
 (defun user::sync-user (username)
-  (with-model model ('simple-users (db:query (:= 'username username)))
+  (dm:with-model model ('simple-users (db:query (:= 'username username)))
     (let ((user (make-instance 'user
                                :id (dm:id model) :username (dm:field model "username")
                                :perms (mapcar #'(lambda (b) (cl-ppcre:split "\\." b))

@@ -15,4 +15,4 @@
   :description "Radiance rate interface implementation offering a convenient db-backed rate limiting."
   :components ((:file "rate"))
   :depends-on ((:interface :database)
-               (:interface :data-model)))
+               :r-data-model))

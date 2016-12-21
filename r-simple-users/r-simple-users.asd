@@ -15,5 +15,5 @@
   :description "A simple implementation for Radiance's users interface, offering database-backed user storage."
   :components ((:file "users"))
   :depends-on ((:interface :database)
-               (:interface :data-model)
+               :r-data-model
                :cl-ppcre))

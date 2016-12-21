@@ -5,13 +5,14 @@
 |#
 
 (in-package #:cl-user)
-(asdf:defsystem #:r-simple-model
+(asdf:defsystem #:r-data-model
   :defsystem-depends-on (:radiance)
   :class "radiance:virtual-module"
-  :module-name "SIMPLE-MODEL"
+  :module-name "DATA-MODEL"
   :author "Nicolas Hafner <shinmera@tymoon.eu>"
   :maintainer "Nicolas Hafner <shinmera@tymoon.eu>"
   :version "1.0.1"
-  :description "Trivially simple Radiance data-model interface implementation."
-  :components ((:file "model"))
+  :description "Trivially simple Radiance database record wrapper"
+  :components ((:file "module")
+               (:file "model"))
   :depends-on ((:interface :database)))
