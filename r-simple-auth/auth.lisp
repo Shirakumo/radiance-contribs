@@ -28,13 +28,6 @@
           (otherwise auth:*login-timeout*)))
   (trigger 'auth:associate session))
 
-(defun auth:login! (&optional (landing-page (referer *request*)) (session (session:get)))
-  (setf (session:field session 'landing-page)
-        (etypecase landing-page
-          (uri (uri-to-url landing-page :representation :external))
-          (string landing-page)))
-  (redirect #@"auth/login"))
-
 (defun auth::set-password (user password)
   (setf (user:field user "simple-auth-hash")
         (cryptos:pbkdf2-hash password *salt*))

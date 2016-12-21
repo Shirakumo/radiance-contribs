@@ -86,13 +86,13 @@
                                      (limit . ,(limit rate))
                                      (ip . ,ip)))))))
 
-(defmacro rate:with-limitation ((rate) &body body)
-  (assert (rate rate) () "No such rate ~s." rate)
+(defmacro rate:with-limitation ((limit) &body body)
+  (assert (limit limit) () "No such limit ~s." limit)
   (let ((amount (gensym "AMOUNT"))
         (timeout (gensym "TIMEOUT")))
-    `(multiple-value-bind (,amount ,timeout) (rate:left ',rate)
+    `(multiple-value-bind (,amount ,timeout) (rate:left ',limit)
        (if (and (<= ,amount 0) (< 0 ,timeout))
-           (funcall (exceeded (rate ',rate)) ,timeout)
+           (funcall (exceeded (rate ',limit)) ,timeout)
            (progn
-             (rate::tax-rate ',rate)
+             (rate::tax-rate ',limit)
              ,@body)))))

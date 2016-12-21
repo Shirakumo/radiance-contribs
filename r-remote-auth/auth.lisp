@@ -25,10 +25,6 @@
           (otherwise auth:*login-timeout*)))
   (trigger 'auth:associate session))
 
-(defun auth:login! (&optional (landing-page (referer *request*)) (session (session:get)))
-  (setf (session:field session 'landing-page) landing-page)
-  (redirect "auth/login"))
-
 (defmacro with-south-vars ((&optional access-token access-secret) &body body)
   `(south:with-oauth-environment
        (:oauth/request-token (config :request-token)
