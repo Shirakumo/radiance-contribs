@@ -12,7 +12,10 @@
 (in-package #:simple-profile)
 
 (define-trigger db:connected ()
-  (db:create 'simple-profile-fields '((:name (:varchar 32)) (:type (:varchar 16)) (:default (:varchar 128)) (:editable (:integer 1)))
+  (db:create 'simple-profile-fields '((:name (:varchar 32))
+                                      (:type (:varchar 16))
+                                      (:default (:varchar 128))
+                                      (:editable (:integer 1)))
              :indices '(:name)))
 
 (defun normalize (user)
@@ -32,7 +35,11 @@
          (user:username user))))
 
 (defun profile:fields ()
-  (dm:get 'simple-profile-fields (db:query :all)))
+  (loop for model in (dm:get 'simple-profile-fields (db:query :all))
+        collect `((:name . ,(dm:field "name" model))
+                  (:type . ,(dm:field "type" model))
+                  (:default . ,(dm:field "default" model))
+                  (:editable . ,(= 1 (dm:field "editable" model))))))
 
 (defun profile:add-field (name &key (type :text) default (editable T))
   (let ((name (string-downcase name)))
@@ -42,6 +49,9 @@
                 () "TYPE must be one of (text textarea password email url time date datetime datetime-local month week color number range checkbox radio file tel).")
         (db:insert 'simple-profile-fields `((name . ,name) (type . ,type) (default . ,(or default "")) (editable . ,(if editable 1 0)))))
       name)))
+
+(defun profile:remove-field (name)
+  (db:remove 'simple-profile-fields (db:query (:= 'name name))))
 
 (defvar *panels* ())
 
@@ -111,4 +121,5 @@
         (error 'request-not-found :message (format NIL "No such user~@[ ~a~]." username)))))
 
 (define-resource-locator profile page (user &optional tab)
-  (make-uri :domains (list "user") :path (format NIL "~(~a~)~@[/~(~a~)~]" (user:username user) tab)))
+  (make-uri :domains (list "user")
+            :path (format NIL "~(~a~@[/~a~]~)" (user:username user) tab)))
