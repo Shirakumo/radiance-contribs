@@ -81,7 +81,7 @@
         (admin::remove-category category)))
     name))
 
-(defmacro admin:define-panel (name category options &body body)
+(defmacro admin:define-panel (category name options &body body)
   (let ((name (string-downcase name))
         (category (string-downcase category))
         (options (copy-list options)))
