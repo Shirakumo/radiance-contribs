@@ -13,6 +13,14 @@
 
 (defvar *panels* ())
 
+(define-resource-locator admin page (&optional category panel &rest args)
+  (declare (ignore args))
+  (cond (category
+         (make-uri :domains '("admin")
+                   :path (format NIL "~(/~a/~a~)" category panel)))
+        (T
+         #@"admin/")))
+
 (defclass menu-entry ()
   ((name :initarg :name :accessor name)
    (icon :initarg :icon :accessor icon)
