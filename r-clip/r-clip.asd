@@ -15,4 +15,5 @@
   :components ((:file "package")
                (:file "pattern")
                (:file "clip-integration"))
-  :depends-on (:clip))
+  :depends-on (:r-data-model
+               :clip))
