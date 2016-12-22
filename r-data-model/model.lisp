@@ -9,7 +9,7 @@
 (define-condition not-inserted-yet (error radiance:radiance-condition)
   ((model :initarg :model :initform (error "MODEL required."))))
 
-(defclass data-model (data-model)
+(defclass data-model ()
   ((collection :initform (error "COLLECTION required.") :initarg :collection :accessor collection)
    (field-table :initform (make-hash-table :test 'equal) :initarg :field-table :accessor field-table)
    (field-labels :initform () :initargs :field-labels :accessor field-labels)

@@ -8,6 +8,7 @@
 (define-module #:data-model
   (:use #:cl)
   (:nicknames #:dm #:org.shirakumo.radiance.data-model)
+  (:shadow #:get #:delete)
   (:export
    #:data-model
    #:id
@@ -21,7 +22,7 @@
    #:save
    #:delete
    #:copy-model
-   #:insertg
+   #:insert
    #:with-model-fields
    #:with-model
    #:with-model-save
