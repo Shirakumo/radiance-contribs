@@ -8,16 +8,16 @@
     <label>Username</label>
     <input type="text" placeholder="Username" lquery="(val (user:username user))" readonly /><br />
     <label>Displayname</label>
-    <input type="text" name="displayname" placeholder="Mr. Fancy" lquery="(val (user:field user :displayname))" maxlength="32" /><br />
+    <input type="text" name="displayname" placeholder="Mr. Fancy" lquery="(val (user:field :displayname user))" maxlength="32" /><br />
     <label>E-Mail</label>
-    <input type="email" name="email" placeholder="email@example.com" lquery="(val (user:field user :email))" required /><br />
+    <input type="email" name="email" placeholder="email@example.com" lquery="(val (user:field :email user))" required /><br />
     <c:splice iterate="fields">
       <span>
         <label lquery="(text name)"></label>
         <c:if>
           <c:test>(string= "textarea" type)</c:test>
-          <c:then><textarea lquery="(attr :name name) (text (or (user:field (** :user) name) default))" /></c:then>
-          <c:else><input lquery="(attr :name name :type type :value (or (user:field (** :user) name) default))" /></c:else>
+          <c:then><textarea lquery="(attr :name name) (text (or (user:field name (** :user)) default))" /></c:then>
+          <c:else><input lquery="(attr :name name :type type :value (or (user:field name (** :user)) default))" /></c:else>
         </c:if><br />
       </span>
     </c:splice>

@@ -29,13 +29,12 @@
   (trigger 'auth:associate session))
 
 (defun auth::set-password (user password)
-  (setf (user:field user "simple-auth-hash")
-        (cryptos:pbkdf2-hash password *salt*))
-  (user:save user))
+  (setf (user:field "simple-auth-hash" user)
+        (cryptos:pbkdf2-hash password *salt*)))
 
 (defun auth::check-password (user password)
-  (and (user:field user "simple-auth-hash")
-       (string= (user:field user "simple-auth-hash")
+  (and (user:field "simple-auth-hash" user)
+       (string= (user:field "simple-auth-hash" user)
                 (cryptos:pbkdf2-hash password *salt*))
        T))
 
@@ -52,7 +51,7 @@
     (let ((user (user:get username)))
       (unless user
         (err "Invalid username or password."))
-      (let ((hash (user:field user "simple-auth-hash")))
+      (let ((hash (user:field "simple-auth-hash" user)))
         (unless hash
           (err "Invalid username or password."))
         (cond
@@ -121,7 +120,7 @@
               (when (string/= password repeat)
                 (error "The passwords do not match!"))
               (let ((user (user:get username :if-does-not-exist :create)))
-                (setf (user:field user "email") email)
+                (setf (user:field "email" user) email)
                 (auth::set-password user password)
                 (auth:associate user)))))
         (let ((nonce (make-random-string)))

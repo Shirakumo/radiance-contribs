@@ -25,13 +25,13 @@
     ((or string symbol) (user:get user :if-does-not-exist :error))))
 
 (defun profile:avatar (user size)
-  (let ((email (or (user:field (normalize user) "email") "")))
+  (let ((email (or (user:field "email" (normalize user)) "")))
     (format NIL "//www.gravatar.com/avatar/~a?s=~d&d=blank"
             (cryptos:md5 (string-downcase email)) size)))
 
 (defun profile:name (user)
   (let ((user (normalize user)))
-    (or* (user:field user "displayname")
+    (or* (user:field "displayname" user)
          (user:username user))))
 
 (defun profile:fields ()

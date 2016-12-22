@@ -3,7 +3,7 @@
   <ul iterate="(profile:fields)">
     <li>
       <label lquery="(text name)">FIELD</label>
-      <span lquery="(text (or* (user:field (** :user) name) default))">VALUE</span>
+      <span lquery="(text (or* (user:field name (** :user)) default))">VALUE</span>
     </li>
   </ul>
 </div>

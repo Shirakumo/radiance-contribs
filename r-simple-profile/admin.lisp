@@ -17,16 +17,15 @@
           ((:save
             (ratify:perform-test
               :email (post-var "email"))
-            (setf (user:field user "displayname") (post-var "displayname")
-                  (user:field user "email") (post-var "email"))
+            (setf (user:field "displayname" user) (post-var "displayname")
+                  (user:field "email" user) (post-var "email"))
             (dolist (field fields)
               (let ((val (post-var (dm:field field "name"))))
                 (ratify:perform-test (find-symbol (string-upcase (dm:field field "type")) :keyword) val)
-                (setf (user:field user (dm:field field "name"))
+                (setf (user:field (dm:field field "name") user)
                       (if (or (not val) (string= val ""))
                           (dm:field field "default")
                           val))))
-            (user:save user)
             (setf info "Account updated.")))
         (r-clip:process
          T
@@ -42,10 +41,9 @@
               (:color (post-var "color"))
               (:property (post-var "background"))
               (:boolean (post-var "show-actions")))
-            (setf (user:field user "simple-profile-color") (post-var "color")
-                  (user:field user "simple-profile-background") (post-var "background")
-                  (user:field user "simple-profile-actions") (post-var "show-actions"))
-            (user:save user)
+            (setf (user:field "simple-profile-color" user) (post-var "color")
+                  (user:field "simple-profile-background" user) (post-var "background")
+                  (user:field "simple-profile-actions" user) (post-var "show-actions"))
             (setf info "Profile updated.")))
         (r-clip:process
          T

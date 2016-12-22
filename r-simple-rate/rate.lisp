@@ -14,19 +14,19 @@
 
 (define-trigger db:connected ()
   ;; See http://stackoverflow.com/a/7477384/743237 for the IP length
-  (db:create 'simple-rates '((rate (:varchar 64))
-                             (time (:integer 5))
-                             (limit :integer)
-                             (ip (:varchar 45)))
-             :indices '(rate (rate ip))))
+  (db:create 'tracking '((limit (:varchar 64))
+                         (time (:integer 5))
+                         (amount :integer)
+                         (ip (:varchar 45)))
+             :indices '(limit ip)))
 
-(defclass rate ()
+(defclass limit ()
   ((name :initarg :name :initform (error "NAME required.") :accessor name)
    (timeout :initarg :timeout :initform 60 :accessor timeout)
-   (limit :initarg :limit :initform 1 :accessor limit)
-   (exceeded :initarg :exceeded :initform #'(lambda (limit) (error "Please wait ~d seconds." limit)) :accessor exceeded)))
+   (amount :initarg :amount :initform 1 :accessor amount)
+   (exceeded :initarg :exceeded :initform (lambda (s) (error "Please wait ~d second~:p." s)) :accessor exceeded)))
 
-(defun db-rate-name (name)
+(defun db-limit-name (name)
   (let ((name (etypecase name
                 (string name)
                 (symbol (format NIL "~a:~a"
@@ -36,55 +36,53 @@
         name
         (error "Rate name too long."))))
 
-(defun rate (name)
+(defun limit (name)
   (gethash name *rates*))
 
-(defun (setf rate) (rate name)
+(defun (setf limit) (rate name)
   (setf (gethash name *rates*)
         rate))
 
 (defmacro rate:define-limit (name (time-left &key (timeout 60) (limit 1)) &body on-limit-exceeded)
   `(eval-when (:compile-toplevel :load-toplevel :execute)
-     (setf (rate ',name)
+     (setf (limit ',name)
            (make-instance
-            'rate
-            :name ,(db-rate-name name)
-            :limit ,limit
+            'limit
+            :name ,(db-limit-name name)
+            :amount ,limit
             :timeout ,timeout
             :exceeded #'(lambda (,time-left) ,@on-limit-exceeded)))))
 
-(defun rate:left (rate &key (ip (remote *request*)))
-  (let* ((rate (rate rate))
-         (limit (dm:get-one 'simple-rates (db:query (:and (:= 'rate (name rate))
-                                                          (:= 'ip ip))))))
-    (if limit
-        (values (dm:field limit "limit")
-                (- (+ (dm:field limit "time")
-                      (timeout rate))
+(defun rate:left (limit &key (ip (remote *request*)))
+  (let* ((limit (limit limit))
+         (tracking (dm:get-one 'tracking (db:query (:and (:= 'limit (name limit))
+                                                         (:= 'ip ip))))))
+    (if tracking
+        (values (dm:field tracking "amount")
+                (- (+ (dm:field tracking "time")
+                      (timeout limit))
                    (get-universal-time)))
-        (values (limit rate)
-                (timeout rate)))))
+        (values (amount limit)
+                (timeout limit)))))
 
-(defun rate::tax-rate (rate &key (ip (remote *request*)))
-  (let* ((rate (rate rate))
-         (limit (dm:get-one 'simple-rates (db:query (:and (:= 'rate (name rate))
-                                                          (:= 'ip ip))))))
-    (if limit
-        (progn
-          ;; If we're out of attempts, but the time has also passed, reset.
-          (when (and (<= 0 (dm:field limit "limit"))
-                     (<= (+ (dm:field limit "time") (timeout rate)) (get-universal-time)))
-            (setf (dm:field limit "limit") (limit rate)))
-          ;; Tax it.
-          (decf (dm:field limit "limit"))
-          (setf (dm:field limit "time") (get-universal-time))
-          (dm:save limit))
-
-        (progn
-          (db:insert 'simple-rates `((rate . ,(name rate))
-                                     (time . ,(get-universal-time))
-                                     (limit . ,(limit rate))
-                                     (ip . ,ip)))))))
+(defun rate::tax-rate (limit &key (ip (remote *request*)))
+  (let* ((limit (limit limit))
+         (tracking (dm:get-one 'tracking (db:query (:and (:= 'limit (name limit))
+                                                         (:= 'ip ip))))))
+    (cond (tracking
+           ;; If we're out of attempts, but the time has also passed, reset.
+           (when (and (<= 0 (dm:field tracking "amount"))
+                      (<= (+ (dm:field tracking "time") (timeout limit)) (get-universal-time)))
+             (setf (dm:field tracking "amount") (amount limit)))
+           ;; Tax it.
+           (decf (dm:field tracking "amount"))
+           (setf (dm:field tracking "time") (get-universal-time))
+           (dm:save tracking))
+          (T
+           (db:insert 'tracking `((limit . ,(name limit))
+                                  (time . ,(get-universal-time))
+                                  (amount . ,(amount limit))
+                                  (ip . ,ip)))))))
 
 (defmacro rate:with-limitation ((limit) &body body)
   (assert (limit limit) () "No such limit ~s." limit)
@@ -92,7 +90,7 @@
         (timeout (gensym "TIMEOUT")))
     `(multiple-value-bind (,amount ,timeout) (rate:left ',limit)
        (if (and (<= ,amount 0) (< 0 ,timeout))
-           (funcall (exceeded (rate ',limit)) ,timeout)
+           (funcall (exceeded (limit ',limit)) ,timeout)
            (progn
              (rate::tax-rate ',limit)
              ,@body)))))
