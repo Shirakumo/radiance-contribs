@@ -13,33 +13,42 @@
   (setf wookie:*enabled-plugins* '(:get :post :cookie :multipart))
   (wookie:load-plugins))
 
-(defvar *listeners* (make-hash-table :test 'equalp))
+(defvar *listeners* (make-hash-table :test 'eql))
 (defvar *listener-lock* (bt:make-lock "LISTENERS"))
 
-(defun server:start (port &key address ssl-cert ssl-key ssl-pass)
-  (let ((name (format NIL "~a:~a" address port)))
-    (l:info :server "Starting listener ~a" name)
-    (bt:make-thread
-     #'(lambda ()
-         (as:with-event-loop (:catch-app-errors T)
-           (let* ((listener (if (and ssl-cert ssl-key)
-                                (make-instance 'wookie:ssl-listener :port port :bind address :password ssl-pass :key ssl-key :certificate ssl-cert)
-                                (make-instance 'wookie:listener :port port :bind address)))
-                  (server (wookie:start-server listener)))
-             (bt:with-lock-held (*listener-lock*)
-               (setf (gethash name *listeners*) server))))))
-    (trigger 'server:started port address)))
+(define-trigger server-start ()
+  (defaulted-config '(:port 8080 :address "127.0.0.1") :default)
+  (loop for name being the hash-keys of (config)
+        for config being the hash-values of (config)
+        do (apply #'server:start name config)))
 
-(defun server:stop (port &optional address)
-  (let* ((name (format NIL "~a:~a" address port))
-         (listener (gethash name *listeners*)))
+(define-trigger server-stop ()
+  (mapcar #'server:stop (server:listeners)))
+
+(defun server:start (name &key port address ssl-cert ssl-key ssl-pass)
+  (check-type name keyword)
+  (l:info :server "Starting listener ~a" name)
+  (bt:make-thread
+   #'(lambda ()
+       (as:with-event-loop (:catch-app-errors T)
+         (let* ((listener (if (and ssl-cert ssl-key)
+                              (make-instance 'wookie:ssl-listener :port port :bind address :password ssl-pass :key ssl-key :certificate ssl-cert)
+                              (make-instance 'wookie:listener :port port :bind address)))
+                (server (wookie:start-server listener)))
+           (bt:with-lock-held (*listener-lock*)
+             (setf (gethash name *listeners*) server))))))
+  (trigger 'server:started name))
+
+(defun server:stop (name)
+  (check-type name keyword)
+  (let ((listener (gethash name *listeners*)))
     (cond
       (listener
        (l:info :server "Stopping listener ~a" name)
        (bt:with-lock-held (*listener-lock*)
          (as:close-tcp-server listener)
          (remhash name *listeners*))
-       (trigger 'server:stopped port address))
+       (trigger 'server:stopped name))
       (T
        (error "No such listener found.")))))
 

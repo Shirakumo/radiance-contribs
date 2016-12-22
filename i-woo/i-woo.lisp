@@ -10,32 +10,39 @@
     (:implements #:server))
 (in-package #:i-woo)
 
-(defvar *listeners* (make-hash-table :test 'equalp))
+(defvar *listeners* (make-hash-table :test 'eql))
 
-(defun server:start (port &key address ssl-cert ssl-key ssl-pass)
-  (when (or ssl-cert ssl-key ssl-pass)
-    (warn "SSL is currently not supported in WOO; ignored.")) ;; Until that is supported.
-  (let ((name (format NIL "~a:~a" address port)))
-    (when (gethash name *listeners*)
-      (error "Server already started on specified port & address!"))
-    (l:info :server "Starting listener ~a" name)
-    (setf (gethash name *listeners*)
-          (bt:make-thread
-           (lambda ()
-             (catch 'stop-server
-               (woo:run #'handle-request :port port :address (or address "0.0.0.0"))))))
-    (trigger 'server:started port address)))
+(define-trigger server-start ()
+  (defaulted-config '(:port 8080 :address "127.0.0.1") :default)
+  (loop for name being the hash-keys of (config)
+        for config being the hash-values of (config)
+        do (apply #'server:start name config)))
 
-(defun server:stop (port &optional address)
-  (let* ((name (format NIL "~a:~a" address port))
-         (listener (gethash name *listeners*)))
+(define-trigger server-stop ()
+  (mapcar #'server:stop (server:listeners)))
+
+(defun server:start (name &key port address)
+  (check-type name keyword)
+  (when (gethash name *listeners*)
+    (error "Server already started."))
+  (l:info :server "Starting listener ~a" name)
+  (setf (gethash name *listeners*)
+        (bt:make-thread
+         (lambda ()
+           (catch 'stop-server
+             (woo:run #'handle-request :port port :address (or address "0.0.0.0"))))))
+  (trigger 'server:started name))
+
+(defun server:stop (name)
+  (check-type name keyword)
+  (let ((listener (gethash name *listeners*)))
     (cond
       (listener
        (l:info :server "Stopping listener ~a" name)
        (when (bt:thread-alive-p listener)
          (bt:interrupt-thread listener (lambda () (throw 'stop-server NIL))))
        (remhash name *listeners*)
-       (trigger 'server:stopped port address))
+       (trigger 'server:stopped name))
       (T
        (error "No such listener found!")))))
 

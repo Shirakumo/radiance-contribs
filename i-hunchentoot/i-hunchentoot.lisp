@@ -10,7 +10,16 @@
     (:implements #:server))
 (in-package #:i-hunchentoot)
 
-(defvar *listeners* (make-hash-table :test 'equalp))
+(defvar *listeners* (make-hash-table :test 'eql))
+
+(define-trigger server-start ()
+  (defaulted-config '(:port 8080 :address "127.0.0.1") :default)
+  (loop for name being the hash-keys of (config)
+        for config being the hash-values of (config)
+        do (apply #'server:start name config)))
+
+(define-trigger server-stop ()
+  (mapcar #'server:stop (server:listeners)))
 
 (defun mklist (port address ssl-cert ssl-key ssl-pass)
   (let ((args `(:port ,port :address ,address
@@ -21,23 +30,23 @@
                :ssl-certificate-file ssl-cert :ssl-privatekey-file ssl-key :ssl-privatekey-password ssl-pass args)
         (apply #'make-instance 'hunchentoot:easy-acceptor args))))
 
-(defun server:start (port &key address ssl-cert ssl-key ssl-pass)
-  (let ((listener (mklist port address ssl-cert ssl-key ssl-pass))
-        (name (format NIL "~a:~a" address port)))
+(defun server:start (name &key port address ssl-cert ssl-key ssl-pass)
+  (check-type name keyword)
+  (let ((listener (mklist port address ssl-cert ssl-key ssl-pass)))
     (l:info :server "Starting listener ~a" name)
     (setf (gethash name *listeners*) listener)
     (hunchentoot:start listener)
-    (trigger 'server:started port address)))
+    (trigger 'server:started name)))
 
-(defun server:stop (port &optional address)
-  (let* ((name (format NIL "~a:~a" address port))
-         (listener (gethash name *listeners*)))
+(defun server:stop (name)
+  (check-type name keyword)
+  (let ((listener (gethash name *listeners*)))
     (cond
       (listener
        (l:info :server "Stopping listener ~a" name)
        (hunchentoot:stop listener)
        (remhash name *listeners*)
-       (trigger 'server:stopped port address))
+       (trigger 'server:stopped name))
       (T
        (error "No such listener found.")))))
 
