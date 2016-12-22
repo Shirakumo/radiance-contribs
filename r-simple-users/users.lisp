@@ -14,9 +14,9 @@
 (defvar *default-permissions* ())
 
 (define-trigger db:connected ()
-  (db:create 'simple-users '((username (:varchar 32)) (permissions :text)) :indices '(username))
-  (db:create 'simple-users-fields '((uid :integer) (field (:varchar 64)) (value :text)) :indices '(uid))
-  (db:create 'simple-users-actions '((uid :integer) (time :integer) (public (:integer 1)) (action :text)) :indices '(uid))
+  (db:create 'users '((username (:varchar 32)) (permissions :text)) :indices '(username))
+  (db:create 'fields '((uid :integer) (field (:varchar 64)) (value :text)) :indices '(uid))
+  (db:create 'actions '((uid :integer) (time :integer) (public (:integer 1)) (action :text)) :indices '(uid))
   (user::sync)
   (trigger 'user:ready))
 
@@ -27,12 +27,11 @@
   ((username :initarg :username :initform (error "USERNAME required.") :accessor username)
    (id :initarg :id :initform (error "ID required.") :accessor id)
    (fields :initarg :fields :initform (make-hash-table :test 'equalp) :accessor fields)
-   (perms :initarg :perms :initform () :accessor perms)
-   (modified :initarg :modified :initform () :accessor modified)))
+   (perms :initarg :perms :initform () :accessor perms)))
 
 (defmethod print-object ((user user) stream)
   (print-unreadable-object (user stream)
-    (format stream "USER ~a~:[~; *~]" (username user) (modified user))))
+    (format stream "USER ~a" (username user))))
 
 (defmethod initialize-instance :after ((user user) &key username)
   (setf (gethash username *user-cache*) user)
@@ -65,52 +64,49 @@
   (l:info :users "Creating new user ~s" username)
   (make-instance 'user
                  :username username
-                 :id (db:insert 'simple-users `((username . ,username) (permissions . "")))))
+                 :id (db:insert 'users `((username . ,username) (permissions . "")))))
 
 (defun user:username (user)
   (username (ensure-user user)))
 
 (defun user:fields (user)
-  (loop for field being the hash-keys of (fields (ensure-user user))
-        collect field))
+  (let ((fields (fields (ensure-user user))))
+    (loop for field being the hash-keys of fields
+          for value being the hash-values of fields
+          collect (cons field value))))
 
-(defun user:field (user field)
+(defun user:field (field user)
   (gethash (string field) (fields (ensure-user user))))
 
-(defun (setf user:field) (value user field)
+(defun (setf user:field) (value field user)
   (let ((user (ensure-user user)))
-    (push (cons field (null (gethash field (fields user)))) (modified user))
-    (setf (gethash field (fields user)) value)))
+    (db:with-transaction ()
+      (if (nth-value 1 (gethash field (fields user)))
+          (db:update 'fields (db:query (:and (:= 'uid (id user)) (:= 'field field))) `((value . ,value)))
+          (db:insert 'fields `((uid . ,(id user)) (field . ,field) (value . ,value))))
+      (setf (gethash field (fields user)) value))))
 
-(defun user:save (user)
+(defun user:remove-field (field user)
   (let ((user (ensure-user user)))
-    (loop for (name . insert) = (pop (modified user))
-          while name
-          do (if insert
-                 (db:insert 'simple-users-fields `((uid . ,(id user)) (field . ,name) (value . ,(gethash name (fields user)))))
-                 (db:update 'simple-users-fields (db:query (:and (:= 'uid (id user)) (:= 'field name))) `((value . ,(gethash name (fields user)))))))
+    (db:with-transaction ()
+      (db:remove 'fields (db:query (:and (:= 'uid (id user)) (:= 'field field))))
+      (remhash (string field) (fields user)))
     user))
-
-(defun user:saved-p (user)
-  (not (modified (ensure-user user))))
-
-(defun user:discard (user)
-  (user::sync-user (user:username user)))
 
 (defun user:remove (user)
   (let ((user (ensure-user user)))
-    (trigger 'user:remove user)
-    (db:remove 'simple-users-actions (db:query (:= 'uid (id user))))
-    (db:remove 'simple-users-fields (db:query (:= 'uid (id user))))
-    (db:remove 'simple-users (db:query (:= '_id (id user))))
-    (setf (fields user) NIL
-          (id user) NIL
-          (perms user) NIL
-          (modified user) NIL)
+    (db:with-transaction ()
+      (db:remove 'actions (db:query (:= 'uid (id user))))
+      (db:remove 'fields (db:query (:= 'uid (id user))))
+      (db:remove 'users (db:query (:= '_id (id user))))
+      (trigger 'user:remove user)
+      (setf (fields user) NIL
+            (id user) NIL
+            (perms user) NIL))
     user))
 
 (defun save-perms (user)
-  (db:update 'simple-users (db:query (:= '_id (id user)))
+  (db:update 'users (db:query (:= '_id (id user)))
              `((permissions . ,(format NIL "~{~{~a~^.~}~^~%~}" (perms user)))))
   user)
 
@@ -160,25 +156,27 @@
 
 (defun user:action (user action public)
   (let ((user (ensure-user user)))
-    (db:insert 'simple-users-actions `((uid . ,(id user)) (time . ,(get-universal-time)) (public . ,(if public 1 0)) (action . ,action)))
+    (db:insert 'actions `((uid . ,(id user))
+                          (time . ,(get-universal-time))
+                          (public . ,(if public 1 0)) (action . ,action)))
     (trigger 'user:action user action public)
     user))
 
 (defun user:actions (user n &key (public T) oldest-first)
   (let ((user (ensure-user user)))
-    (db:iterate 'simple-users-actions (if public
-                                          (db:query (:and (:= 'uid (id user)) (:= 'public 1)))
-                                          (db:query (:and (:= 'uid (id user)))))
+    (db:iterate 'actions (if public
+                             (db:query (:and (:= 'uid (id user)) (:= 'public 1)))
+                             (db:query (:and (:= 'uid (id user)))))
       #'(lambda (ta) (gethash "action" ta))
       :fields '(action) :amount n :sort `((time ,(if oldest-first :ASC :DESC))) :accumulate T)))
 
 (defun user::sync-user (username)
-  (dm:with-model model ('simple-users (db:query (:= 'username username)))
+  (dm:with-model model ('users (db:query (:= 'username username)))
     (let ((user (make-instance 'user
                                :id (dm:id model) :username (dm:field model "username")
                                :perms (mapcar #'(lambda (b) (cl-ppcre:split "\\." b))
                                               (cl-ppcre:split "\\n" (dm:field model "permissions"))))))
-      (dolist (entry (dm:get 'simple-users-fields (db:query (:= 'uid (dm:id model)))))
+      (dolist (entry (dm:get 'fields (db:query (:= 'uid (dm:id model)))))
         (let ((field (dm:field entry "field"))
               (value (dm:field entry "value")))
           (l:debug :users "Set field ~a of ~a to ~s" field user value)
@@ -188,7 +186,7 @@
 (defun user::sync ()
   (setf *user-cache* (make-hash-table :test 'equalp))
   (let ((idtable (make-hash-table :test 'eql)))
-    (dolist (model (dm:get 'simple-users (db:query :all)))
+    (dolist (model (dm:get 'users (db:query :all)))
       (l:debug :users "Loading ~a" (dm:field model "username"))
       (setf (gethash (dm:id model) idtable)
             (make-instance 'user
@@ -196,7 +194,7 @@
                            :perms (mapcar #'(lambda (b) (cl-ppcre:split "\\." b))
                                           (cl-ppcre:split "\\n" (dm:field model "permissions"))))))
     ;; sync fields
-    (dolist (entry (dm:get 'simple-users-fields (db:query :all)))
+    (dolist (entry (dm:get 'fields (db:query :all)))
       (let ((field (dm:field entry "field"))
             (value (dm:field entry "value"))
             (uid (dm:field entry "uid")))
