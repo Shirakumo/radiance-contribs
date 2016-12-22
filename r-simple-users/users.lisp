@@ -62,9 +62,11 @@
 
 (defun user::create (username)
   (l:info :users "Creating new user ~s" username)
-  (make-instance 'user
-                 :username username
-                 :id (db:insert 'users `((username . ,username) (permissions . "")))))
+  (let ((user (make-instance 'user
+                             :username username
+                             :id (db:insert 'users `((username . ,username) (permissions . ""))))))
+    (trigger 'user:create user)
+    user))
 
 (defun user:username (user)
   (username (ensure-user user)))
