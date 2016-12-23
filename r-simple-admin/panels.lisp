@@ -12,9 +12,13 @@
           (eql :external (nth-value 1 (find-symbol (symbol-name symb) (symbol-package symb))))
           (symbol-name symb)))
 
-(admin:define-panel admin overview (:access (perm radiance admin) :icon "fa-home" :tooltip "Radiance overview info.")
+(admin:define-panel admin overview (:access () :icon "fa-home" :tooltip "Radiance overview info.")
   (r-clip:process
-   (plump:parse (@template "overview.ctml"))))
+   (plump:parse
+    (if (user:check (or (auth:current) (user:get "anonymous"))
+                    (perm radiance admin))
+        (@template "overview.ctml")
+        (@template "overview-public.ctml")))))
 
 (admin:define-panel admin modules (:access (perm radiance admin modules) :icon "fa-cube" :tooltip "Oversee active modules.")
   (let* ((action (post-var "action"))

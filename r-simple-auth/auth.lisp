@@ -72,10 +72,6 @@
       (error 'api-error :message "You are not logged in.")))
 
 (define-page login "auth/login" (:clip "login.ctml")
-  (r-clip:process
-   T
-   :user (auth:current)
-   :msg (get-var "msg"))
   (when (or* (post/get "landing-page"))
     (setf (session:field 'landing-page)
           (if (string= (post/get "landing-page") "REFERER")
@@ -84,7 +80,11 @@
   (when (auth:current)
     (let ((landing (session:field 'landing-page)))
       (when landing
-        (redirect landing)))))
+        (redirect landing))))
+  (r-clip:process
+   T
+   :user (auth:current)
+   :msg (get-var "msg")))
 
 (define-resource-locator auth page (page &optional landing)
   (cond ((string-equal page "login")

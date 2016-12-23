@@ -19,14 +19,13 @@
 
 (defun process (target &rest fields)
   (let ((*package* (find-package "RADIANCE-CLIP")))
-    (setf *document*
-          (apply #'clip:process
-                 (etypecase target 
-                   ((eql T) *document*)
-                   (pathname (plump:parse target))
-                   (string (plump:parse target))
-                   (plump:node target))
-                 fields))))
+    (apply #'clip:process
+           (etypecase target 
+             ((eql T) *document*)
+             (pathname (plump:parse target))
+             (string (plump:parse target))
+             (plump:node target))
+           fields)))
 
 (defmacro with-clip-processing ((template &optional (content-type "application/xhtml+xml; charset=utf-8")) &body body)
   `(let ((*document* (plump:parse ,(if (stringp template)
@@ -35,8 +34,9 @@
      (setf (content-type *response*) ,content-type)
      (handler-bind ((plump:invalid-xml-character #'abort)
                     (plump:discouraged-xml-character #'muffle-warning))
-       ,@body
-       (plump:serialize *document* NIL))))
+       (plump:serialize
+        (progn ,@body)
+        NIL))))
 
 (defmacro switch-template (template)
   `(setf *document* (lquery:load-page (@template ,template))))
