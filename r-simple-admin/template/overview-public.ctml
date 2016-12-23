@@ -18,7 +18,7 @@
       <tbody>
         <tr>
           <td>User</td>
-          <td lquery="(text (auth:current))"></td>
+          <td lquery="(text (user:username (or (auth:current) (user:get :anonymous))))"></td>
         </tr>
       </tbody>
     </table>
