@@ -96,9 +96,15 @@
     (setf (timeout session) seconds)
     ;; Update cookie
     (when (and (boundp '*request*) (boundp '*response*))
-      (setf (cookie "radiance-session" :domain (domain *request*) :path "/" :timeout (timeout session) :http-only T)
-            ;; Note: Add support for the secure flag through https options in the main framework
-            (make-cookie-value session)))))
+      (let ((fulldomain (format NIL "~{.~a~}" (reverse (domains (external-uri (uri *request*)))))))
+        ;; Attempt to set a cookie for the root domain
+        (setf (cookie "radiance-session" :domain (format NIL ".~a" (domain *request*)) :path "/" :timeout (timeout session) :http-only T)
+              ;; Note: Add support for the secure flag through https options in the main framework
+              (make-cookie-value session))
+        ;; Also set it for the specific domain we have, just to be sure we have something if the full domain set fails.
+        (setf (cookie "radiance-session" :domain fulldomain :path "/" :timeout (timeout session) :http-only T)
+              ;; Note: Add support for the secure flag through https options in the main framework
+              (make-cookie-value session))))))
 
 (defun session:end (&optional session)
   (let ((session (ensure-session session)))
