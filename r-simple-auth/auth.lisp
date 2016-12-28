@@ -14,8 +14,9 @@
 ;; Out to config at some point
 (defvar *salt* "dajke20090")
 
-(defun auth:current (&optional (session (session:get)))
-  (session:field session 'user))
+(defun auth:current (&optional default (session (session:get)))
+  (or (session:field session 'user)
+      (and default (user:get default :if-does-not-exist :error))))
 
 (defun auth:associate (user &optional (session (session:get)))
   (v:info :auth "Associating ~a with ~a and prolonging for ~a"
