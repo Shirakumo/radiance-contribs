@@ -115,7 +115,7 @@
           (null "")
           (string result)
           (plump:node (plump:serialize result NIL))
-          (array (lquery:$ result (serialize) (node))))))))
+          (array (plump:serialize (aref result 0) NIL)))))))
 
 (define-page admin-index "admin/([^/]*)(/(.+))?" (:uri-groups (category NIL panel) :access () :clip "index.ctml")
   (let ((manage (post/get "simple-admin-manage"))
