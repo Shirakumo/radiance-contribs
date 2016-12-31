@@ -17,7 +17,7 @@
 (defvar *listener-lock* (bt:make-lock "LISTENERS"))
 
 (define-trigger server-start ()
-  (defaulted-config '(:port 8080 :address "127.0.0.1") :default)
+  (defaulted-config `(:address "0.0.0.0" :port ,(or (mconfig :radiance-core :port) 8080)) :default)
   (loop for name being the hash-keys of (config)
         for config being the hash-values of (config)
         do (apply #'server:start name config)))
