@@ -5,6 +5,8 @@
 |#
 
 (in-package #:cl-user)
+
+(pushnew :verbose-no-init *features*)
 (asdf:defsystem #:i-verbose
   :defsystem-depends-on (:radiance)
   :class "radiance:virtual-module"

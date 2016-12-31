@@ -33,3 +33,9 @@
 
 (defun l:fatal (category log-string &rest format-args)
   (apply #'v:log :fatal category log-string format-args))
+
+(define-trigger startup ()
+  (setf v:*global-controller* (v:make-standard-global-controller)))
+
+(define-trigger shutdown-done ()
+  (v:sync))
