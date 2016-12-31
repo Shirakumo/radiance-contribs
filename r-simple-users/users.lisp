@@ -13,16 +13,6 @@
 (defvar *user-cache* (make-hash-table :test 'equalp))
 (defvar *default-permissions* ())
 
-(define-trigger db:connected ()
-  (db:create 'users '((username (:varchar 32)) (permissions :text)) :indices '(username))
-  (db:create 'fields '((uid :integer) (field (:varchar 64)) (value :text)) :indices '(uid))
-  (db:create 'actions '((uid :integer) (time :integer) (public (:integer 1)) (action :text)) :indices '(uid))
-  (user::sync)
-  (trigger 'user:ready))
-
-(define-trigger db:disconnected ()
-  (trigger 'user:unready))
-
 (defclass user (user:user)
   ((username :initarg :username :initform (error "USERNAME required.") :accessor username)
    (id :initarg :id :initform (error "ID required.") :accessor id)
@@ -205,3 +195,13 @@
     ;; ensure anonymous user
     (user:get :anonymous :if-does-not-exist :create)
     (l:info :users "Synchronized ~d users from database." (hash-table-count idtable))))
+
+(define-trigger db:connected ()
+  (db:create 'users '((username (:varchar 32)) (permissions :text)) :indices '(username))
+  (db:create 'fields '((uid :integer) (field (:varchar 64)) (value :text)) :indices '(uid))
+  (db:create 'actions '((uid :integer) (time :integer) (public (:integer 1)) (action :text)) :indices '(uid))
+  (user::sync)
+  (trigger 'user:ready))
+
+(define-trigger db:disconnected ()
+  (trigger 'user:unready))
