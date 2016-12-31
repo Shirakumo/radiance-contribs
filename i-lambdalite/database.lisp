@@ -136,6 +136,7 @@
     (error 'db:invalid-field :field field)))
 
 (defun db:create (collection structure &key indices (if-exists :ignore))
+  (declare (ignore indices))
   (loop for (name type) in structure
         do (check-field-name name)
            (check-field-type name type))
@@ -146,8 +147,7 @@
       (:supersede (db:drop collection))))
   (lambdalite:insert 'schemas `(:/name ,(ensure-collection collection)
                                 :/structure ,(loop for (name type) in structure
-                                                   collect (list (string name) type))
-                                :/indices ,indices))
+                                                   collect (list (string name) type))))
   T)
 
 (defun db:structure (collection)
