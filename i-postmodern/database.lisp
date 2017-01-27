@@ -33,7 +33,7 @@
 
 (defun db:collection-exists-p (collection)
   (with-connection
-    (postmodern:table-exists-p (string-downcase collection))))
+      (postmodern:table-exists-p (ensure-collection-name collection))))
 
 (defun db:create (collection structure &key indices (if-exists :ignore))
   (flet ((err (msg) (error 'db:invalid-collection :database *current-db* :collection collection :message msg)))
