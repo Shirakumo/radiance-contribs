@@ -14,10 +14,10 @@
                                          (merge-pathnames "cache/" (mconfig-pathname #.*package*))))
 (defvar *caches* (make-hash-table :test 'eql))
 
-(define-trigger startup-done ()
+(define-trigger startup ()
   (ensure-directories-exist *cache-directory*))
 
-(define-trigger shutdown-done ()
+(define-trigger shutdown ()
   (uiop:delete-directory-tree *cache-directory* :validate (constantly T)))
 
 (defun (setf cache::builder) (builder-func name)
