@@ -39,7 +39,7 @@
   (flet ((err (msg) (error 'db:invalid-collection :database *current-db* :collection collection :message msg)))
     (unless structure (err "Structure cannot be empty."))
     (let* ((collection (ensure-collection-name collection))
-           (query (format NIL "CREATE TABLE \"~a\" (\"_id\" INTEGER PRIMARY KEY DEFAULT nextval('~:*~a/ID-SEQ'), ~{~a~^, ~});"
+           (query (format NIL "CREATE TABLE \"~a\" (\"_id\" INTEGER PRIMARY KEY DEFAULT nextval('\"~:*~a/ID-SEQ\"'), ~{~a~^, ~});"
                           collection (mapcar #'compile-field structure))))
       (with-connection
         (when (postmodern:table-exists-p collection)
@@ -110,7 +110,7 @@
   (with-collection-existing (collection)
     (with-connection
       (postmodern:query (format NIL "DROP TABLE \"~a\" CASCADE;" collection))
-      (postmodern:query (format NIL "DROP SEQUENCE \"~a-id-seq\" CASCADE;" collection))
+      (postmodern:query (format NIL "DROP SEQUENCE \"~a/ID-SEQ\" CASCADE;" collection))
       T)))
 
 (defun collecting-iterator (function)
