@@ -153,7 +153,7 @@
     (T
      (bt:interrupt-thread (car *prune-thread*)
                           (lambda () (throw 'exit NIL)))
-     (bt:join-thread (car *prune-thread*))))
+     (ignore-errors (bt:join-thread (car *prune-thread*)))))
   (setf *prune-thread* NIL))
 
 (define-trigger radiance:startup ()
