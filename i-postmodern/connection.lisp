@@ -12,7 +12,7 @@
 (defvar *pool-available-condition* (bt:make-condition-variable :name "POOL-FREE-CONDITION"))
 (defparameter db::*default-pool-size* 5)
 (defvar *connection-pool* ())
-(defvar *current-con*)
+(defvar *current-con* NIL)
 
 (defun db::spawn-connection (host port user pass db)
   (bt:with-lock-held (*pool-lock*)
@@ -44,7 +44,7 @@
   (bt:condition-notify *pool-available-condition*))
 
 (defun call-with-connection (function)
-  (if (boundp '*current-con*)
+  (if *current-con*
       (funcall function)
       (let* ((*current-con* (acquire-connection))
              (postmodern:*database* *current-con*))
