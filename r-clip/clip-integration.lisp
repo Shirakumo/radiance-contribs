@@ -28,15 +28,20 @@
            fields)))
 
 (defmacro with-clip-processing ((template &optional (content-type "application/xhtml+xml; charset=utf-8")) &body body)
-  `(let ((*document* (plump:parse ,(if (stringp template)
-                                       `(@template ,template)
-                                       template))))
-     (setf (content-type *response*) ,content-type)
-     (handler-bind ((plump:invalid-xml-character #'abort)
-                    (plump:discouraged-xml-character #'muffle-warning))
-       (plump:serialize
-        (progn ,@body)
-        NIL))))
+  (let ((result (gensym "RESULT")))
+    `(let ((*document* (plump:parse ,(if (stringp template)
+                                         `(@template ,template)
+                                         template))))
+       (flet ((,result ()
+                ,@body))
+         (let ((,result (,result)))
+           (typecase ,result
+             (plump:node
+              (setf (content-type *response*) ,content-type)
+              (handler-bind ((plump:invalid-xml-character #'abort)
+                             (plump:discouraged-xml-character #'muffle-warning))
+                (plump:serialize ,result NIL)))
+             (T ,result)))))))
 
 (defmacro switch-template (template)
   `(setf *document* (lquery:load-page (@template ,template))))
