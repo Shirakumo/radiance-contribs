@@ -77,7 +77,7 @@
   (define-pattern-attribute action)
   (define-pattern-attribute formaction))
 
-(lquery:define-lquery-function time (node time)
+(lquery:define-lquery-function time (node time &optional (format :human))
   (let ((stamp (etypecase time
                  (local-time:timestamp time)
                  (fixnum (local-time:universal-to-timestamp time))
@@ -87,5 +87,9 @@
     (setf (plump:attribute node "title")
           (format-fancy-date stamp))
     (setf (plump:children node) (plump:make-child-array))
-    (plump:make-text-node node (format-human-date stamp)))
+    (plump:make-text-node node (ecase format
+                                 (:clock (format-clock-time stamp))
+                                 (:human (format-human-date stamp))
+                                 (:machine (format-machine-date stamp))
+                                 (:fancy (format-fancy-date stamp)))))
   node)
