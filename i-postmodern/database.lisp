@@ -39,14 +39,14 @@
   (flet ((err (msg) (error 'db:invalid-collection :database *current-db* :collection collection :message msg)))
     (unless structure (err "Structure cannot be empty."))
     (let* ((collection (ensure-collection-name collection))
-           (query (format NIL "CREATE TABLE \"~a\" (\"_id\" INTEGER PRIMARY KEY DEFAULT nextval('~:*~a-id-seq'), ~{~a~^, ~});"
+           (query (format NIL "CREATE TABLE \"~a\" (\"_id\" INTEGER PRIMARY KEY DEFAULT nextval('~:*~a/ID-SEQ'), ~{~a~^, ~});"
                           collection (mapcar #'compile-field structure))))
       (with-connection
         (when (postmodern:table-exists-p collection)
           (ecase if-exists
             (:ignore (return-from db:create NIL))
             (:error (error 'db:collection-already-exists :database *current-db* :collection collection))))
-        (postmodern:query (format NIL "CREATE SEQUENCE \"~a-id-seq\";" collection))
+        (postmodern:query (format NIL "CREATE SEQUENCE \"~a/ID-SEQ\";" collection))
         (postmodern:query query)
         (postmodern:query (format NIL "CREATE INDEX ON \"~a\" (\"_id\")" collection))
         (dolist (index indices)
@@ -60,24 +60,25 @@
 (defun compile-field (field)
   (flet ((err (msg) (error 'db:invalid-field :field field :message msg)))
     (destructuring-bind (name type) field
-      (unless (valid-name-p name)
-        (err "Invalid name, only a-z, - and _ are allowed."))
-      (let ((arg (when (listp type) (prog1 (second type) (setf type (first type))))))
+      (let ((arg (when (listp type) (prog1 (second type) (setf type (first type)))))
+            (name (string-downcase name)))
+        (unless (valid-name-p name)
+          (err "Invalid name, only a-z, - and _ are allowed."))
         (ecase type
           ((:INTEGER :ID)
-           (format NIL "\"~a\" ~a" (string-downcase name)
+           (format NIL "\"~a\" ~a" name
                    (ecase arg ((1 2) "SMALLINT") ((3 4) "INTEGER") ((5 6 7 8) "BIGINT") ((NIL) "INTEGER"))))
           (:FLOAT
            (when arg (err "FLOAT cannot accept an argument."))
-           (format NIL "\"~a\" DOUBLE PRECISION" (string-downcase name)))
+           (format NIL "\"~a\" DOUBLE PRECISION" name))
           (:CHARACTER
            (error "CURRENTLY NOT SUPPORTED."))
           (:VARCHAR
            (unless arg (err "VARCHAR requires a length argument."))
-           (format NIL "\"~a\" VARCHAR(~d)" (string-downcase name) arg))
+           (format NIL "\"~a\" VARCHAR(~d)" name arg))
           (:TEXT
            (when arg (err "TEXT cannot accept an argument."))
-           (format NIL "\"~a\" TEXT" (string-downcase name))))))))
+           (format NIL "\"~a\" TEXT" name)))))))
 
 (defun db:structure (collection)
   (with-connection

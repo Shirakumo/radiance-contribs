@@ -18,9 +18,9 @@
      (handler-case (progn ,@body)
        (cl-postgres-error:syntax-error-or-access-violation (err)
          (when (string= "42P01" (cl-postgres-error::database-error-code err))
-           (error 'invalid-collection :database *current-db*
-                                      :collection ,collection
-                                      :message (cl-postgres-error::database-error-message err)))))))
+           (error 'db:invalid-collection :database *current-db*
+                                         :collection ,collection
+                                         :message (cl-postgres-error::database-error-message err)))))))
 
 (defun valid-name-p (name)
   (loop for char across name
