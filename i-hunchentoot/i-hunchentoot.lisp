@@ -72,21 +72,28 @@
 
 (defun post-handler (response request)
   (declare (optimize (speed 3)))
-  (handler-bind
-      ((error #'handle-condition))
-    (l:trace :server "Post-process: ~a" response)
-    ;; Process attributes
-    (setf (hunchentoot:return-code*) (return-code response)
-          (hunchentoot:content-type*) (content-type response))
-    (maphash #'(lambda (key val) (declare (ignore key)) (set-real-cookie val)) (cookies response))
-    (maphash #'(lambda (key val) (setf (hunchentoot:header-out (header-encode key))
-                                       (header-encode val))) (headers response))
+  (let ((*request* request)
+        (*response* response))
+    (restart-case
+        (handler-bind
+            ((error #'handle-condition))
+          (l:trace :server "Post-process: ~a" response)
+          ;; Process attributes
+          (setf (hunchentoot:return-code*) (return-code response)
+                (hunchentoot:content-type*) (content-type response))
+          (maphash #'(lambda (key val) (declare (ignore key)) (set-real-cookie val)) (cookies response))
+          (maphash #'(lambda (key val) (setf (hunchentoot:header-out (header-encode key))
+                                             (header-encode val))) (headers response))
+          (unless (data response)
+            (error 'request-empty :request request)))
+      (set-data (data)
+        (setf (data response) data)))
     ;; Process body
     (etypecase (data response)
       (pathname (hunchentoot:handle-static-file (data response) (content-type response)))
       (string (data response))
       ((array (unsigned-byte 8)) (data response))
-      (null (error 'request-empty :request request)))))
+      (null "Something really bad is going on (empty request body after error handling)"))))
 
 (defun pre-handler (request)
   (declare (optimize (speed 3)))
