@@ -54,7 +54,7 @@
 
 (defun hull (collection) ;; speed up test with extra interface func.
   (unless (db:collection-exists-p collection)
-    (error 'database-invalid-collection :collection collection :message "Cannot create hull."))
+    (error 'db:invalid-collection :collection collection :message "Cannot create hull."))
   (make-instance 'data-model :collection collection))
 
 (defun hull-p (data-model)
