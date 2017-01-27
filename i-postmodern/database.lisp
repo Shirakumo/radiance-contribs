@@ -174,7 +174,8 @@
 
 (defun db:update (collection query data &key skip amount sort)
   (with-collection-existing (collection)
-    (with-query ((make-query (format NIL "UPDATE \"~a\" SET ~~{~~/i-postmodern::%field-clause/~~^, ~~} WHERE ctid IN (SELECT ctid FROM \"~:*~a\" " ollection)
+    (with-query ((make-query (format NIL "UPDATE \"~a\" SET ~~{~~/i-postmodern::%field-clause/~~^, ~~} WHERE ctid IN (SELECT ctid FROM \"~:*~a\" "
+                                     collection)
                              query skip amount sort) query vars)
       (macrolet ((looper (&rest iters)
                    `(loop ,@iters

@@ -29,16 +29,17 @@
 (defun ensure-collection-name (collection &optional check-exists)
   (let ((string (etypecase collection
                   (symbol (format NIL "~a/~a"
-                                  (package-name (symbol-package thing)) (symbol-name thing)))
+                                  (package-name (symbol-package collection)) (symbol-name collection)))
                   (string collection))))
     (unless (valid-name-p string)
-      (error 'invalid-collection :database *current-db*
-                                 :collection collection
-                                 :message "Invalid name, only a-z, - and _ are allowed."))
+      (error 'db:invalid-collection :database *current-db*
+                                    :collection collection
+                                    :message "Invalid name, only a-z, - and _ are allowed."))
     (when check-exists
-      (with-connection
-          (unless (postmodern:table-exists-p string)
-            (error 'invalid-collection :database *current-db*
-                                       :collection collection
-                                       :message "Collection does not exist on database."))))
+      (call-with-connection
+       (lambda ()
+         (unless (postmodern:table-exists-p string)
+           (error 'db:invalid-collection :database *current-db*
+                                         :collection collection
+                                         :message "Collection does not exist on database.")))))
     string))
