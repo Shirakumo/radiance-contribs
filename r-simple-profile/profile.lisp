@@ -12,10 +12,10 @@
 (in-package #:simple-profile)
 
 (define-trigger db:connected ()
-  (db:create 'simple-profile-fields '((:name (:varchar 32))
-                                      (:type (:varchar 16))
-                                      (:default (:varchar 128))
-                                      (:editable (:integer 1)))
+  (db:create 'fields '((:name (:varchar 32))
+                       (:type (:varchar 16))
+                       (:default (:varchar 128))
+                       (:editable (:integer 1)))
              :indices '(:name)))
 
 (defun normalize (user)
@@ -35,7 +35,7 @@
          (user:username user))))
 
 (defun profile:fields ()
-  (loop for model in (dm:get 'simple-profile-fields (db:query :all))
+  (loop for model in (dm:get 'fields (db:query :all))
         collect `((:name . ,(dm:field "name" model))
                   (:type . ,(dm:field "type" model))
                   (:default . ,(dm:field "default" model))
@@ -43,15 +43,15 @@
 
 (defun profile:add-field (name &key (type :text) default (editable T))
   (let ((name (string-downcase name)))
-    (unless (db:select 'simple-profile-fields (db:query (:= 'name name)))
+    (unless (db:select 'fields (db:query (:= 'name name)))
       (let ((type (string-downcase type)))
         (assert (member type '(text textarea password email url time date datetime datetime-local month week color number range checkbox radio file tel) :test #'string-equal)
                 () "TYPE must be one of (text textarea password email url time date datetime datetime-local month week color number range checkbox radio file tel).")
-        (db:insert 'simple-profile-fields `((name . ,name) (type . ,type) (default . ,(or default "")) (editable . ,(if editable 1 0)))))
+        (db:insert 'fields `((name . ,name) (type . ,type) (default . ,(or default "")) (editable . ,(if editable 1 0)))))
       name)))
 
 (defun profile:remove-field (name)
-  (db:remove 'simple-profile-fields (db:query (:= 'name name))))
+  (db:remove 'fields (db:query (:= 'name name))))
 
 (defvar *panels* ())
 

@@ -12,7 +12,7 @@
 (define-implement-trigger admin
   (admin:define-panel settings account (:access (perm profile change account) :clip "account.ctml" :icon "fa-user" :tooltip "Change account information.")
     (let ((user (auth:current))
-          (fields (dm:get 'simple-profile-fields (db:query (:= 'editable 1)))))
+          (fields (dm:get 'fields (db:query (:= 'editable 1)))))
       (with-actions (error info)
           ((:save
             (ratify:perform-test
@@ -53,11 +53,11 @@
   (admin:define-panel users fields (:access (perm radiance admin users fields) :clip "fields.ctml" :icon "fa-list" :tooltip "Set user profile fields.")
     (with-actions (error info)
         ((:add
-          (db:insert 'simple-profile-fields `((name . ,(post-var "name")) (type . ,(post-var "type")) (default . ,(post-var "default")) (editable . ,(or (post-var "editable") 0)))))
+          (db:insert 'fields `((name . ,(post-var "name")) (type . ,(post-var "type")) (default . ,(post-var "default")) (editable . ,(or (post-var "editable") 0)))))
          (:delete
           (dolist (name (or (post-var "selected[]") (list (post-var "name"))))
-            (db:remove 'simple-profile-fields (db:query (:= 'name name))))))
+            (db:remove 'fields (db:query (:= 'name name))))))
       (r-clip:process
        T
        :error error
-       :fields (dm:get 'simple-profile-fields (db:query :all))))))
+       :fields (dm:get 'fields (db:query :all))))))
