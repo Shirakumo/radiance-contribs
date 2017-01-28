@@ -15,7 +15,7 @@
     (plump:parse (@template template))
     :condition condition
     :reason (or (when (typep condition 'radiance-condition)
-                  (message condition))
+                  (format NIL "This might be because: ~a" (message condition)))
                 "Unfortunately, no detailed reason for this problem is available."))
    NIL))
 
