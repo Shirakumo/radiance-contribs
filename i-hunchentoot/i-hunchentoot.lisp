@@ -13,10 +13,10 @@
 (defvar *listeners* (make-hash-table :test 'eql))
 
 (define-trigger server-start ()
+  (defaulted-config `(:default) :enabled)
   (defaulted-config `(:address "0.0.0.0" :port ,(or (mconfig :radiance-core :port) 8080)) :default)
-  (loop for name being the hash-keys of (config)
-        for config being the hash-values of (config)
-        do (apply #'server:start name config)))
+  (loop for name in (config :enabled)
+        (apply #'server:start name (config name))))
 
 (define-trigger server-stop ()
   (mapcar #'server:stop (server:listeners)))
