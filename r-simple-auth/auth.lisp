@@ -11,8 +11,9 @@
   (:domain "auth"))
 (in-package #:simple-auth)
 
-;; Out to config at some point
-(defvar *salt* "dajke20090")
+(define-trigger startup ()
+  (defaulted-config (make-random-string) :salt)
+  (defaulted-config "open" :registration))
 
 (defun auth:current (&optional default (session (session:get)))
   (or (session:field session 'user)
@@ -31,12 +32,12 @@
 
 (defun auth::set-password (user password)
   (setf (user:field "simple-auth-hash" user)
-        (cryptos:pbkdf2-hash password *salt*)))
+        (cryptos:pbkdf2-hash password (config :salt))))
 
 (defun auth::check-password (user password)
   (and (user:field "simple-auth-hash" user)
        (string= (user:field "simple-auth-hash" user)
-                (cryptos:pbkdf2-hash password *salt*))
+                (cryptos:pbkdf2-hash password (config :salt)))
        T))
 
 (define-api simple-auth/login (username password &optional redirect) ()
@@ -56,7 +57,7 @@
         (unless hash
           (err "Invalid username or password."))
         (cond
-          ((string= hash (cryptos:pbkdf2-hash password *salt*))
+          ((string= hash (cryptos:pbkdf2-hash password (config :salt)))
            (auth:associate user)
            (let ((landing (or (session:field 'landing-page) "/")))
              (setf (session:field 'landing-page) NIL)
