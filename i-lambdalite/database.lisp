@@ -151,7 +151,9 @@
   T)
 
 (defun db:structure (collection)
-  (lambdalite:select1 'schemas (lambdalite:where (eql :/name (ensure-collection collection)))))
+  (getf
+   (lambdalite:select1 'schemas (lambdalite:where (eql :/name (ensure-collection collection))))
+   :/structure))
 
 (defun db:empty (collection)
   (lambdalite:del (ensure-collection collection) (constantly T)))
