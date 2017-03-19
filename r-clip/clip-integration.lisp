@@ -14,9 +14,6 @@
                     (unless (string= val "") val)
                     val)))
 
-(defmethod clip:clip ((object dm:data-model) field)
-  (dm:field object field))
-
 (defun process (target &rest fields)
   (let ((*package* (find-package "RADIANCE-CLIP")))
     (apply #'clip:process
@@ -93,3 +90,11 @@
                                  (:machine (format-machine-date stamp))
                                  (:fancy (format-fancy-date stamp)))))
   node)
+
+;; We need to do this ugly hack in order to defer it to when the system is actually loaded.
+;; This is necessary to bypass a nasty dependency on the database interface through the
+;; data-model interface, when it really isn't necessary to have it.
+(defmethod asdf:perform :after ((op asdf:load-op) (c (eql (asdf:find-system :r-data-model))))
+  (let ((*package* #.*package*))
+    (eval (read-from-string "(defmethod clip:clip ((object dm:data-model) field)
+                               (dm:field object field))"))))
