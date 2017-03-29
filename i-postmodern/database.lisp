@@ -13,7 +13,7 @@
 ;; TODO:
 ;; Implement closer erroring details of spec. (invalid fields, etc)
 
-(define-trigger startup-done ()
+(define-trigger server-start ()
   (db:connect (defaulted-config "radiance" :default)))
 
 (define-trigger server-stop ()

@@ -6,7 +6,7 @@
 
 (in-package #:i-sqlite)
 
-(define-trigger startup-done ()
+(define-trigger server-start ()
   (defaulted-config "test.db" :connections "test")
   (defaulted-config "radiance.db" :connections "radiance")
   (db:connect (defaulted-config "radiance" :default))

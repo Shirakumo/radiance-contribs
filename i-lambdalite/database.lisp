@@ -64,7 +64,7 @@
                    ,@body))
            (unless lambdalite::*tx* (lambdalite::persist ,name)))))))
 
-(define-trigger startup-done ()
+(define-trigger server-start ()
   (defaulted-config "radiance.db" :connections "radiance")
   (defaulted-config "test.db" :connections "test")
   (db:connect (defaulted-config "radiance" :default)))
