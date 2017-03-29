@@ -12,13 +12,13 @@
   (lambdalite:with-tx
     (let ((id))
       (lambdalite:update
-       'rowid
+       :rowid
        (lambda (row) (string= collection (getf row :/collection)))
        (lambda (row) (setf id (incf (getf row :/id))) row))
       (unless id
         (setf id 0)
         (lambdalite:insert
-         'rowid
+         :rowid
          `(:/collection ,(string collection)
            :/id ,id)))
       id)))
@@ -103,11 +103,11 @@
   (not (null lambdalite::*db*)))
 
 (defun db:collections ()
-  (loop for row in (lambdalite:select 'schemas)
+  (loop for row in (lambdalite:select :schemas)
         collect (string (getf row :/name))))
 
 (defun db:collection-exists-p (collection)
-  (not (null (lambdalite:select 'schemas (lambdalite:where (eql :/name (ensure-collection collection)))))))
+  (not (null (lambdalite:select :schemas (lambdalite:where (eql :/name (ensure-collection collection)))))))
 
 (defun check-field-type (field type)
   (unless (typecase type
@@ -137,14 +137,14 @@
       (:ignore (return-from db:create NIL))
       (:error (error 'db:collection-already-exists :collection collection :database *db-name*))
       (:supersede (db:drop collection))))
-  (lambdalite:insert 'schemas `(:/name ,(ensure-collection collection)
+  (lambdalite:insert :schemas `(:/name ,(ensure-collection collection)
                                 :/structure ,(loop for (name type) in structure
                                                    collect (list (string name) type))))
   T)
 
 (defun db:structure (collection)
   (getf
-   (lambdalite:select1 'schemas (lambdalite:where (eql :/name (ensure-collection collection))))
+   (lambdalite:select1 :schemas (lambdalite:where (eql :/name (ensure-collection collection))))
    :/structure))
 
 (defun db:empty (collection)
@@ -154,7 +154,7 @@
   (unless (db:structure collection)
     (error 'db:invalid-collection :collection collection))
   (let ((collection (ensure-collection collection)))
-    (lambdalite:del 'schemas (lambdalite:where (eql :/name collection)))
+    (lambdalite:del :schemas (lambdalite:where (eql :/name collection)))
     (lambdalite::with-lock
       (remhash collection lambdalite::*db*))))
 
