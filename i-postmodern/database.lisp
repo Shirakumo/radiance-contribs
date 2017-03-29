@@ -13,12 +13,6 @@
 ;; TODO:
 ;; Implement closer erroring details of spec. (invalid fields, etc)
 
-(define-trigger server-start ()
-  (db:connect (defaulted-config "radiance" :default)))
-
-(define-trigger server-stop ()
-  (db:disconnect))
-
 (deftype db:id ()
   '(integer 0))
 
@@ -196,3 +190,10 @@
   `(with-connection
      (postmodern:with-transaction ()
        ,@body)))
+
+
+(define-trigger server-start ()
+  (db:connect (defaulted-config "radiance" :default)))
+
+(define-trigger server-stop ()
+  (db:disconnect))

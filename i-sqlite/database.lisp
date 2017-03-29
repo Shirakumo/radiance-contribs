@@ -6,15 +6,6 @@
 
 (in-package #:i-sqlite)
 
-(define-trigger server-start ()
-  (defaulted-config "test.db" :connections "test")
-  (defaulted-config "radiance.db" :connections "radiance")
-  (db:connect (defaulted-config "radiance" :default))
-  (load-pcre))
-
-(define-trigger server-stop ()
-  (db:disconnect))
-
 (deftype db:id ()
   '(integer 0))
 
@@ -178,3 +169,13 @@
 (defmacro db:with-transaction (() &body body)
   `(sqlite:with-transaction *current-con*
      ,@body))
+
+
+(define-trigger server-start ()
+  (defaulted-config "test.db" :connections "test")
+  (defaulted-config "radiance.db" :connections "radiance")
+  (db:connect (defaulted-config "radiance" :default))
+  (load-pcre))
+
+(define-trigger server-stop ()
+  (db:disconnect))

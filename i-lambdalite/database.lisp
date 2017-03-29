@@ -64,14 +64,6 @@
                    ,@body))
            (unless lambdalite::*tx* (lambdalite::persist ,name)))))))
 
-(define-trigger server-start ()
-  (defaulted-config "radiance.db" :connections "radiance")
-  (defaulted-config "test.db" :connections "test")
-  (db:connect (defaulted-config "radiance" :default)))
-
-(define-trigger server-stop ()
-  (db:disconnect))
-
 (deftype db:id ()
   '(integer 0))
 
@@ -308,3 +300,11 @@
          (:FIELD `(getf ,*rowvar* ,(ensure-field (second form))))
          (QUOTE (compile-query `(:FIELD ,(second form))))
          (T form))))))
+
+(define-trigger server-start ()
+  (defaulted-config "radiance.db" :connections "radiance")
+  (defaulted-config "test.db" :connections "test")
+  (db:connect (defaulted-config "radiance" :default)))
+
+(define-trigger server-stop ()
+  (db:disconnect))
