@@ -32,7 +32,7 @@
     (string
      (unless (valid-name-p thing)
        (error 'db:invalid-collection :collection thing))
-     (intern thing :keyword))
+     (intern (map 'string (lambda (c) (if (char= c #\/) #\. c)) thing) :keyword))
     (symbol (ensure-collection
              (format NIL "~a/~a"
                      (package-name (symbol-package thing)) (symbol-name thing))))))
