@@ -94,7 +94,13 @@
 ;; We need to do this ugly hack in order to defer it to when the system is actually loaded.
 ;; This is necessary to bypass a nasty dependency on the database interface through the
 ;; data-model interface, when it really isn't necessary to have it.
-(defmethod asdf:perform :after ((op asdf:load-op) (c (eql (asdf:find-system :r-data-model))))
+(defun add-clip-data-model-method ()
   (let ((*package* #.*package*))
     (eval (read-from-string "(defmethod clip:clip ((object dm:data-model) field)
                                (dm:field object field))"))))
+
+(when (asdf:component-loaded-p (asdf:find-system :r-data-model))
+  (add-clip-data-model-method))
+
+(defmethod asdf:perform :after ((op asdf:load-op) (c (eql (asdf:find-system :r-data-model))))
+  (add-clip-data-model-method))
