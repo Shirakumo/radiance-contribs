@@ -11,7 +11,7 @@
   (:domain "auth"))
 (in-package #:simple-auth)
 
-(define-trigger startup ()
+(define-trigger server-start ()
   (defaulted-config (make-random-string) :salt)
   (defaulted-config "open" :registration))
 
