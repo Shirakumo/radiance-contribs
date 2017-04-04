@@ -32,6 +32,7 @@ label{
 input{
     border: 1px solid #DDD;
     background: #EEE;
+    color: #000;
 }
 
 input[type="submit"]{
