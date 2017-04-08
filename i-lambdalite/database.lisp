@@ -104,7 +104,12 @@
 
 (defun db:collections ()
   (loop for row in (lambdalite:select :schemas)
-        collect (string (getf row :/name))))
+        for name = (string (getf row :/name))
+        for cpos = (position #\: name)
+        for realname = (if cpos
+                           (find-symbol (subseq name (1+ cpos)) (subseq name 0 cpos))
+                           name)
+        when realname collect realname))
 
 (defun db:collection-exists-p (collection)
   (not (null (lambdalite:select :schemas (lambdalite:where (eql :/name (ensure-collection collection)))))))
