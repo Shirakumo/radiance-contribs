@@ -47,7 +47,7 @@
        (with-open-file (stream file :direction :output :if-exists :supersede)
          (write-string result stream)))
       ((array (unsigned-byte 8))
-       (with-open-file (stream file :direction :output :if-exists :supersede :element-type '(array (unsigned-byte 8)))
+       (with-open-file (stream file :direction :output :if-exists :supersede :element-type '(unsigned-byte 8))
          (write-sequence result stream)))))
   result)
 
