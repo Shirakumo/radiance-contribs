@@ -30,11 +30,13 @@
   (merge-pathnames (format NIL "~a/~a" (package-name (symbol-package symbol)) (symbol-name symbol)) *cache-directory*))
 
 (defun cache:get (name)
-  (alexandria:read-file-into-byte-vector
-   (cache::file name)))
+  (when (cache::exists name)
+    (alexandria:read-file-into-byte-vector
+     (cache::file name))))
 
 (defun cache:renew (name)
-  (delete-file (cache::file name)))
+  (when (cache::exists name)
+    (delete-file (cache::file name))))
 
 (defun cache::exists (name)
   (probe-file (cache::file name)))
@@ -47,7 +49,7 @@
        (with-open-file (stream file :direction :output :if-exists :supersede)
          (write-string result stream)))
       ((array (unsigned-byte 8))
-       (with-open-file (stream file :direction :output :if-exists :supersede :element-type '(array (unsigned-byte 8)))
+       (with-open-file (stream file :direction :output :if-exists :supersede :element-type '(unsigned-byte 8))
          (write-sequence result stream)))))
   result)
 
