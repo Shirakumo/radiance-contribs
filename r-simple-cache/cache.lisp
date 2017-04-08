@@ -30,11 +30,13 @@
   (merge-pathnames (format NIL "~a/~a" (package-name (symbol-package symbol)) (symbol-name symbol)) *cache-directory*))
 
 (defun cache:get (name)
-  (alexandria:read-file-into-byte-vector
-   (cache::file name)))
+  (when (cache::exists name)
+    (alexandria:read-file-into-byte-vector
+     (cache::file name))))
 
 (defun cache:renew (name)
-  (delete-file (cache::file name)))
+  (when (cache::exists name)
+    (delete-file (cache::file name))))
 
 (defun cache::exists (name)
   (probe-file (cache::file name)))
