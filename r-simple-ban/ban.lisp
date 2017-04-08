@@ -29,6 +29,7 @@
   *bans*)
 
 (defun save-bans ()
+  (ensure-directories-exist *ban-file*)
   (with-open-file (stream *ban-file* :direction :output :if-exists :supersede)
     (loop for ip being the hash-keys of *bans*
           for time being the hash-values of *bans*
