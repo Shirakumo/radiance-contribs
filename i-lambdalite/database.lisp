@@ -23,6 +23,14 @@
            :/id ,id)))
       id)))
 
+;; Override to fix bug in pathname serialisation.
+(defun lambdalite::make-filename (name)
+  (with-output-to-string (out)
+    (loop for c across (string name)
+          do (when (find c ":;[]{}*?\\")
+               (write-char #\\ out))
+             (write-char (char-downcase c) out))))
+
 (defun valid-name-p (name)
   (loop for char across name
         always (find char "-_/abcdefghijklmnopqrstuvwxyz0123456789" :test #'char-equal)))
