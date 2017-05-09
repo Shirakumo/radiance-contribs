@@ -12,7 +12,7 @@
 (defclass data-model ()
   ((collection :initform (error "COLLECTION required.") :initarg :collection :accessor collection)
    (field-table :initform (make-hash-table :test 'equal) :initarg :field-table :accessor field-table)
-   (field-labels :initform () :initargs :field-labels :accessor field-labels)
+   (field-labels :initform () :initarg :field-labels :accessor field-labels)
    (inserted :initform NIL :initarg :inserted :accessor inserted)))
 
 (defmethod print-object ((model data-model) stream)
