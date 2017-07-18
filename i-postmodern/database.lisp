@@ -18,8 +18,8 @@
 
 (defun db:ensure-id (id-ish)
   (etypecase id-ish
-    (integer id-ish)
-    (string (parse-integer id-ish))))
+    ((integer 0) id-ish)
+    (string (db:ensure-id (parse-integer id-ish)))))
 
 (defun db:collections ()
   (with-connection
