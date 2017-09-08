@@ -106,9 +106,7 @@
                                          :port (when colon (parse-integer host :start (1+ colon)))
                                          ;; Cut off starting slash.
                                          :path (subseq (the string
-                                                            (hunchentoot:url-decode
-                                                             (hunchentoot:script-name request)
-                                                             *default-external-format*))
+                                                            (hunchentoot:script-name request))
                                                        1))
                                         :http-method (hunchentoot:request-method request)
                                         :headers (hunchentoot:headers-in request)
