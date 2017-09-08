@@ -37,7 +37,8 @@
               (setf (content-type *response*) ,content-type)
               (handler-bind ((plump:invalid-xml-character #'abort)
                              (plump:discouraged-xml-character #'muffle-warning))
-                (plump:serialize ,result NIL)))
+                (let ((plump:*tag-dispatchers* plump:*xml-tags*))
+                  (plump:serialize ,result NIL))))
              (T ,result)))))))
 
 (defmacro switch-template (template)
