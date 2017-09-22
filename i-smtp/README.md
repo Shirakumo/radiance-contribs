@@ -6,6 +6,7 @@ You will most likely need to configure this module before you're able to use it.
 
 ```
 :host                   ; => The hostname of the SMTP sender.
+:port                   ; => The port to connect over.
 :from                   ; => The email address of the sender.
 :ssl                    ; => One of NIL, :STARTTLS :TLS
 :reply-to               ; => Where to send replies to the mail to.

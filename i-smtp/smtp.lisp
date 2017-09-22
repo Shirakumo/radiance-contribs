@@ -27,6 +27,7 @@
    to
    subject
    message
+   :port (config :port)
    :ssl (config :ssl)
    :reply-to (config :reply-to)
    :display-name (config :display-name)
