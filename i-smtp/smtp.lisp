@@ -13,10 +13,7 @@
 (define-trigger server-start ()
   (defaulted-config "localhost" :host)
   (defaulted-config "test@radiance" :from)
-  (defaulted-config NIL :ssl)
-  (defaulted-config NIL :reply-to)
   (defaulted-config "Radiance" :display-name)
-  (defaulted-config NIL :auth)
   (defaulted-config :utf-8 :external-format))
 
 (defun mail:send (to subject message)
