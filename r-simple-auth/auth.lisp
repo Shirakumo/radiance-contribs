@@ -176,7 +176,7 @@ not be sent a new mail before then."
 
 (define-page logout "auth/logout" ()
   (session:end)
-  (redirect (or (session:field 'landing-page) "/")))
+  (redirect (or (session:field 'landing-page) #@"/")))
 
 (define-page recover "auth/recover" (:clip "recover.ctml")
   (r-clip:process
