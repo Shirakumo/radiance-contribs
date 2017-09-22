@@ -12,6 +12,19 @@
 (in-package #:simple-auth)
 
 (define-trigger server-start ()
+  (defaulted-config (* 60 60 24) :recovery :timeout)
+  (defaulted-config "Radiance Account Recovery" :recovery :subject)
+  (defaulted-config "Hi, ~a.
+
+An account recovery was recently requested. If this was you, please
+use the following link to recover our account. If you did not request
+a recovery, you can simply ignore this email.
+
+    ~a
+
+Note that the recovery link will expire after 24 hours and you will
+not be sent a new mail before then."
+                    :recovery :message)
   (defaulted-config (make-random-string) :salt)
   (defaulted-config "open" :registration))
 
@@ -40,14 +53,70 @@
                 (cryptos:pbkdf2-hash password (config :salt)))
        T))
 
-(define-api simple-auth/login (username password &optional redirect) ()
-  (flet ((err (message)
-           (l:info :auth "Failed login for ~a." username)
-           (cond
-             (redirect
-              (redirect (format NIL "~a?msg=~a" (referer *request*) message))
-              (return-from simple-auth/login ""))
-             (T (error 'api-error :message message)))))
+(defun auth::recovery-active-p (user)
+  (< (- (get-universal-time)
+        (or (user:field "simple-auth-recovery-time" user) 0))
+     (config :recovery :timeout)))
+
+(defun auth::create-recovery (user)
+  (unless (auth::recovery-active-p user)
+    (setf (user:field "simple-auth-recovery-time" user)
+          (get-universal-time))
+    (setf (user:field "simple-auth-recovery" user)
+          (radiance:make-random-string 32))))
+
+(defmacro %with-err (message &body body)
+  (let ((block (gensym "BLOCK")))
+    `(block ,block
+       (flet ((err (message)
+                (l:info :auth ,message username)
+                (cond
+                  ((string= "true" (post/get "browser"))
+                   (redirect (format NIL "~a?msg=~a" (referer *request*) message))
+                   (return-from ,block ""))
+                  (T (error 'api-error :message message)))))
+         ,@body))))
+
+(define-api simple-auth/request-recovery (username) ()
+  (%with-err "Failed to request recovery for ~a."
+    (let ((code (auth::create-recovery username)))
+      (if code
+          (mail:send (user:field "email" username)
+                     (config :recovery :subject)
+                     (format NIL (config :recovery :message) username
+                             (uri-to-url "/api/simple-auth/recover"
+                                         :representation :external
+                                         :query `(("browser" . "true")
+                                                  ("username" . ,username)
+                                                  ("code" . ,code)))))
+          (err "A recovery email has already been sent."))
+      (if (string= "true" (post/get "browser"))
+          (redirect (format NIL "~a?msg=~a" (referer *request*) "Recovery email sent."))
+          (api-output "Recovery email sent.")))))
+
+(define-api simple-auth/recover (username code) ()
+  (%with-err "Failed recovery for ~a."
+    (when (auth:current)
+      (err "Already logged in."))
+    (let* ((user (user:get username))
+           (recovery-code (user:field "simple-auth-recovery" user)))
+      (unless user
+        (err "Invalid username or code."))
+      (unless (auth::recovery-active-p user)
+        (err "Invalid username or code."))
+      (unless (and recovery-code (string= code recovery-code))
+        (err "Invalid username or code."))
+      (auth:associate user)
+      (user:remove-field "simple-auth-recovery-time" user)
+      (auth::set-password user "")
+      (if (string= "true" (post/get "browser"))
+          (redirect (if (admin:implementation)
+                        #@"admin/settings/password"
+                        #@"/"))
+          (api-output "Recovery successful. Your password has been changed to a blank. Please update it.")))))
+
+(define-api simple-auth/login (username password) ()
+  (%with-err "Failed login for ~a."
     (when (auth:current)
       (err "Already logged in."))
     (let ((user (user:get username)))
@@ -59,9 +128,12 @@
         (cond
           ((string= hash (cryptos:pbkdf2-hash password (config :salt)))
            (auth:associate user)
-           (let ((landing (or (session:field 'landing-page) "/")))
+           (let ((landing (or (session:field 'landing-page)
+                              (if (admin:implementation)
+                                  #@"admin/"
+                                  #@"/"))))
              (setf (session:field 'landing-page) NIL)
-             (if redirect
+             (if (string= "true" (post/get "browser"))
                  (redirect landing)
                  (api-output "Login successful."))))
           (T
@@ -105,6 +177,10 @@
 (define-page logout "auth/logout" ()
   (session:end)
   (redirect (or (session:field 'landing-page) "/")))
+
+(define-page recover "auth/recover" (:clip "recover.ctml")
+  (r-clip:process
+   T :msg (get-var "msg")))
 
 (defvar *nonce-salt* (make-random-string))
 (define-page register "auth/register" (:clip "register.ctml")

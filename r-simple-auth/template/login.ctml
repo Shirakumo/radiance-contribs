@@ -6,22 +6,25 @@
     <link rel="stylesheet" type="text/css" @href="/static/simple-auth/simple-auth.css" />
   </head>
   <body>
+    <c:when test="msg"><div id="msg" lquery="(text msg)" /></c:when>
     <c:if test="user">
       <c:then>
         <h1>You are already logged in!</h1>
       </c:then>
       <c:else>
         <h1>Login</h1>
-        <c:when test="msg"><div id="msg" lquery="(text msg)" /></c:when>
         <form @action="/api/simple-auth/login" method="post">
           <label>Username</label><input type="text" name="username" autofocus required /><br />
           <label>Password</label><input type="password" name="password" required /><br />
           <input type="hidden" name="nonce" value="?" lquery="(val (make-random-string))" />
-          <input type="hidden" name="redirect" value="true" />
+          <input type="hidden" name="browser" value="true" />
           <input type="submit" value="Submit" />
         </form>
         <c:when test='(string= (mconfig :simple-auth :registration) "open")'>
-          <a href="/register" id="register-link">Register an Account</a>
+          <a @href="auth/register" id="register-link">Register an Account</a>
+        </c:when>
+        <c:when test='(mail:implementation)'>
+          <a @href="auth/recover" id="recover-link">Recover your Account</a>
         </c:when>
       </c:else>
     </c:if>

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8"/>
+    <title>Account Recovery</title>
+    <link rel="stylesheet" type="text/css" @href="/static/simple-auth/simple-auth.css" />
+  </head>
+  <body>
+    <c:when test="msg"><div id="msg" lquery="(text msg)" /></c:when>
+    <c:if test="(mail:implementation)">
+      <c:then>        
+        <c:if test="user">
+          <c:then>
+            <h1>You are already logged in!</h1>
+          </c:then>
+          <c:else>
+            <h1>Recover</h1>
+            <form @action="/api/simple-auth/request-recovery" method="post">
+              <label>Username</label><input type="text" name="username" autofocus required /><br />
+              <input type="hidden" name="browser" value="true" />
+              <input type="submit" value="Submit" />
+            </form>
+          </c:else>
+        </c:if>
+      </c:then>
+      <c:else>
+        <h1>Account recovery is unavailable. Contact an administrator.</h1>
+      </c:else>
+    </c:if>
+  </body>
+</html>

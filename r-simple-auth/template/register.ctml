@@ -6,6 +6,7 @@
     <link rel="stylesheet" type="text/css" href="/static/simple-auth/simple-auth.css" />
   </head>
   <body>
+    <c:when test="msg"><div id="msg" lquery="(html (r-ratify:present-error msg))" /></c:when>
     <c:if test="nonce">
       <c:then>
         <c:if test="user">
@@ -14,7 +15,6 @@
           </c:then>
           <c:else>
             <h1>Register</h1>
-            <c:when test="msg"><div id="msg" lquery="(html (r-ratify:present-error msg))" /></c:when>
             <form action="#" method="post">
               <label>Username</label><input type="text" name="username" title="Choose a username of up to 32 characters." pattern=".{1,32}" autofocus required
                                             lquery="(val (post-var :username))" /><br />

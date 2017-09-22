@@ -4,7 +4,7 @@
   <c:when test="info"><div class="notice info" lquery="(text info)"></div></c:when>
   <form class="box" action="#" method="post" autofill="off">
     <p>Passwords should be at least 8 characters long. You can use any characters you want in all of unicode!</p>
-    <label>Current Password:</label><input type="password" name="old" required/><br />
+    <label>Current Password:</label><input type="password" name="old"/><br />
     <label>New Password:</label><input type="password" name="new" placeholder="some尻_thatOnlyIKNOW" required pattern=".{8,}"/><br />
     <label>Repeat New:</label><input type="password" name="repeat" required pattern=".{8,}"/><br />
     <div class="actionbar">

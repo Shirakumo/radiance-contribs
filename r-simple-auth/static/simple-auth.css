@@ -9,7 +9,7 @@ body{
     border-left: 5px solid #0088EE;
     border-right: 5px solid #0088EE;
     margin: 0 20% 0 20%;
-    padding: 20px 10px 50px 10px;
+    padding: 10px 10px 50px 10px;
     text-align: center;
 }
 
@@ -20,6 +20,7 @@ h1{
 }
 
 form{
+    margin: 20px;
     display: inline-block;
 }
 
@@ -33,6 +34,7 @@ input{
     border: 1px solid #DDD;
     background: #EEE;
     color: #000;
+    margin: 2px 0 2px 0;
 }
 
 input[type="submit"]{
@@ -53,7 +55,14 @@ input[type="submit"]{
 }
 
 #register-link{
-    display: block;
-    padding-top: 20px;
-    
+    display: block;    
+}
+
+#msg{
+    background: #0088EE;
+    color: #FFF;
+    font-weight: bold;
+    font-size: 1.5em;
+    padding: 5px;
+    margin: -10px -10px 10px -10px;
 }
