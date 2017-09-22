@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8"/>
     <title>Register</title>
-    <link rel="stylesheet" type="text/css" href="/static/simple-auth/simple-auth.css" />
+    <link rel="stylesheet" type="text/css" @href="/static/simple-auth/simple-auth.css" />
   </head>
   <body>
     <c:when test="msg"><div id="msg" lquery="(html (r-ratify:present-error msg))" /></c:when>
