@@ -63,7 +63,7 @@
       (let ((conn (config :connections database-name)))
         (unless conn (err "No such connection found."))
         (when *current-db*
-          (warn 'database-connection-already-open :database database-name)
+          (warn 'db:connection-already-open :database database-name)
           (db:disconnect))
         ;; Spec restarts for already open.
         (let ((host (or (gethash :host conn) "localhost"))
