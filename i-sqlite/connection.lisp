@@ -15,7 +15,7 @@
       (let ((conn (config :connections database-name)))
         (unless conn (err "No such connection found."))
         (when *current-con*
-          (warn 'database-connection-already-open :database database-name)
+          (warn 'db:connection-already-open :database database-name)
           (db:disconnect))
         ;; Spec restarts for already open.
         (l:info :database "Connecting ~a ~a" database-name conn)
