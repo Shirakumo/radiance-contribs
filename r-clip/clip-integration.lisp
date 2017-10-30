@@ -37,7 +37,9 @@
               (setf (content-type *response*) ,content-type)
               (handler-bind ((plump:invalid-xml-character #'abort)
                              (plump:discouraged-xml-character #'muffle-warning))
-                (let ((plump:*tag-dispatchers* plump:*xml-tags*))
+                (let ((plump:*tag-dispatchers* ,(if (search "xhtml" content-type)
+                                                    'plump:*xml-tags*
+                                                    'plump:*html-tags*)))
                   (plump:serialize ,result NIL))))
              (T ,result)))))))
 
@@ -46,7 +48,7 @@
 
 (defun transform-body (body template)
   (if template
-      `((with-clip-processing (,template)
+      `((with-clip-processing ,(radiance::enlist template)
           ,@body))
       body))
 
