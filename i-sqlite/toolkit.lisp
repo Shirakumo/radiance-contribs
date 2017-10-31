@@ -20,17 +20,17 @@
        ,@body)))
 
 (defun valid-name-p (name)
-  (loop for char across name
+  (loop for char across (string name)
         always (find char "-_/abcdefghijklmnopqrstuvwxyz0123456789" :test #'char-equal)))
 
 (defun ensure-collection-name (name &optional check-exists)
-  (let ((string (etypecase name
-                  (string name)
-                  (symbol (format NIL "~a/~a"
-                                  (package-name (symbol-package thing)) (symbol-name thing))))))
+  (let ((collection (etypecase name
+                      (string name)
+                      (symbol (format NIL "~a/~a"
+                                      (package-name (symbol-package name)) (symbol-name name))))))
     (unless (valid-name-p collection)
-      (error 'database-invalid-collection :collection collection :message "Invalid name, only a-z, - and _ are allowed."))
+      (error 'db:invalid-collection :collection collection :message "Invalid name, only a-z, - and _ are allowed."))
     (when check-exists
-      (when (= 0 (db:count 'sqlite_master (db:query (:and (:= 'type "table") (:= 'name string)))))
+      (when (= 0 (db:count "sqlite_master" (db:query (:and (:= 'type "table") (:= 'name collection)))))
         (error 'database-invalid-collection :collection collection :message "Collection does not exist on database.")))
-    string))
+    collection))

@@ -37,12 +37,12 @@
     (format s "\"~a\" ~a" (string-downcase field) order)))
 
 (defun make-query (base where skip amount sort)
-  (assert (or (null amount) (integerp amount)))
-  (assert (or (null skip) (integerp skip)))
-  (assert (listp sort))
+  (check-type amount (or null (integer 1)))
+  (check-type skip (or null (integer 0)))
+  (check-type sort list)
   (with-query (where where vars)
     (cons (format NIL "~a ~a~@[ ORDER BY ~{~/i-sqlite::%sort-clause/~^, ~}~]~@[ LIMIT ~d~]~:[~; OFFSET ~d~]"
-                  base where sort amount (and skip (/= skip 0)) skip)
+                  base where sort (or amount (when skip -1)) (and skip (/= skip 0)) skip)
           vars)))
 
 (defvar *vars*)

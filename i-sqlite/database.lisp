@@ -15,9 +15,12 @@
     (string (parse-integer id-ish))))
 
 (defun db:collections ()
-  (db:iterate 'sqlite_master (db:query (:= 'type "table"))
-    (lambda (row) (gethash "name" row))
-    :sort '(("name" :ASC)) :accumulate T))
+  (remove-if (lambda (name)
+               (and (<= (length "sqlite_") (length name))
+                    (string= name "sqlite_" :end1 (length "sqlite_"))))
+             (db:iterate "sqlite_master" (db:query (:= 'type "table"))
+               (lambda (row) (gethash "name" row))
+               :sort '(("name" :ASC)) :accumulate T)))
 
 (defun db:collection-exists-p (collection)
   (ignore-errors
@@ -26,13 +29,13 @@
 (defun db:create (collection structure &key indices (if-exists :ignore))
   (let ((collection (ensure-collection-name collection)))
     (flet ((err (msg) (error 'db:invalid-collection :database *current-db* :collection collection :message msg)))
-      (unless structure (err "Structure cannot be empty."))
-      (let ((query (format NIL "CREATE TABLE \"~a\" (\"_id\" INTEGER PRIMARY KEY AUTOINCREMENT, ~{~a~^, ~});"
+      (let ((query (format NIL "CREATE TABLE \"~a\" (\"_id\" INTEGER PRIMARY KEY AUTOINCREMENT~{, ~a~});"
                            collection (mapcar #'compile-field structure))))
         (when (db:collection-exists-p collection)
           (ecase if-exists
             (:ignore (return-from db:create NIL))
-            (:error (error 'db:collection-already-exists :database *current-db* :collection collection))))
+            (:error (error 'db:collection-already-exists :database *current-db* :collection collection))
+            (:supersede (db:drop collection))))
         (exec-query query ())
         (dolist (index indices)
           (let ((index (if (listp index) index (list index))))
@@ -47,21 +50,21 @@
       (unless (valid-name-p name)
         (err "Invalid name, only a-z, - and _ are allowed."))
       (let ((arg (when (listp type) (prog1 (second type) (setf type (first type))))))
-        (ecase type
+        (case type
           ((:INTEGER :ID)
            (format NIL "\"~a\" ~a" (string-downcase name)
                    (ecase arg ((1 2) "SMALLINT") ((3 4) "INTEGER") ((5 6 7 8) "BIGINT") ((NIL) "INTEGER"))))
           (:FLOAT
            (when arg (err "FLOAT cannot accept an argument."))
            (format NIL "\"~a\" DOUBLE PRECISION" (string-downcase name)))
-          (:CHARACTER
-           (error "CURRENTLY NOT SUPPORTED."))
           (:VARCHAR
            (unless arg (err "VARCHAR requires a length argument."))
            (format NIL "\"~a\" VARCHAR(~d)" (string-downcase name) arg))
           (:TEXT
            (when arg (err "TEXT cannot accept an argument."))
-           (format NIL "\"~a\" TEXT" (string-downcase name))))))))
+           (format NIL "\"~a\" TEXT" (string-downcase name)))
+          (T
+           (error 'db:invalid-field :field arg)))))))
 
 (defun db:structure (collection)
   (cdr
@@ -84,12 +87,13 @@
 
 (defun db:empty (collection)
   (with-collection-existing (collection)
-    (exec-query "TRUNCATE TABLE ?;" (list collection))
+    (exec-query (format NIL "DELETE FROM ~s;" collection) ())
+    (exec-query "VACUUM;" ())
     T))
 
 (defun db:drop (collection)
   (with-collection-existing (collection)
-    (exec-query "DROP TABLE ?;" (list collection))
+    (exec-query (format NIL "DROP TABLE ~s;" collection) ())
     T))
 
 (defun collect-statement-to-table (statement)
@@ -128,7 +132,7 @@
 
 (defun db:insert (collection data)
   (with-collection-existing (collection)
-    (let ((query (format NIL "INSERT INTO \"~a\" (~~{\"~~a\"~~^, ~~}) VALUES (~~:*~~{~~*?~~^, ~~});" collection)))
+    (let ((query (format NIL "INSERT INTO ~s (~~{\"~~a\"~~^, ~~}) VALUES (~~:*~~{~~*?~~^, ~~});" collection)))
       (macrolet ((looper (&rest iters)
                    `(loop ,@iters
                           collect (string-downcase field) into fields
@@ -144,14 +148,14 @@
 
 (defun db:remove (collection query &key skip amount sort)
   (with-collection-existing (collection)
-    (with-query ((make-query (format NIL "DELETE FROM \"~a\" WHERE \"_id\" IN (SELECT \"_id\" FROM \"~:*~a\" " collection)
+    (with-query ((make-query (format NIL "DELETE FROM ~s WHERE \"_id\" IN (SELECT \"_id\" FROM \"~:*~a\" " collection)
                              query skip amount sort) query vars)
       (exec-query (format NIL "~a );" query) vars)
       T)))
 
 (defun db:update (collection query data &key skip amount sort)
   (with-collection-existing (collection)
-    (with-query ((make-query (format NIL "UPDATE \"~a\" SET ~~{\"~~a\" = ?~~^, ~~} WHERE ROWID IN (SELECT ROWID FROM \"~:*~a\" " collection)
+    (with-query ((make-query (format NIL "UPDATE ~s SET ~~{\"~~a\" = ?~~^, ~~} WHERE ROWID IN (SELECT ROWID FROM \"~:*~a\" " collection)
                              query skip amount sort) query vars)
       (macrolet ((looper (&rest iters)
                    `(loop ,@iters
