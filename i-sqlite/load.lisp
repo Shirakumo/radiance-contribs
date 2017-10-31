@@ -6,10 +6,6 @@
 
 (in-package #:i-sqlite)
 
-;; Add our data path to the lib search function so people
-;; can put the dlls or whatnots in there.
-(push radiance:*data-path* cffi:*foreign-library-directories*)
-
 ;; Load sqlite
 (cond
   ((find-package "QL")
