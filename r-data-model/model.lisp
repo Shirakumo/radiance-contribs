@@ -90,6 +90,7 @@
     (setf (field data-model "_id")
           (db:insert (collection data-model)
                      (field-table data-model)))
+    (setf (inserted data-model) T)
     data-model))
 
 (defun ensure-query-form (form)
