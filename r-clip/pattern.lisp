@@ -15,6 +15,9 @@
           (parse-pattern-string string)
         (resolve-pattern pattern-string (parse-arglist string i)))))
 
+(defun resolve-uri (string &rest args)
+  (resolve-pattern (parse-pattern-string string) args))
+
 (defun parse-arglist (string &optional (start 0))
   (loop while (< start (length string))
         collect (multiple-value-bind (arg j) (read-from-string string T NIL :start start)

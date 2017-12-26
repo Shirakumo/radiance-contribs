@@ -10,6 +10,7 @@
   (:export
    #:*document*
    #:process
+   #:resolve-uri
    #:with-clip-processing
    #:switch-template))
 (in-package #:r-clip)
