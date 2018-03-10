@@ -144,7 +144,9 @@
 (defun user:add-default-permissions (&rest branches)
   (dolist (branch branches)
     (pushnew branch *default-permissions* :test #'branch-equal))
-  (loop for user being the hash-values of *user-cache*
+  (loop with anonymous = (user:get "anonymous")
+        for user being the hash-values of *user-cache*
+        unless (eq user anonymous)
         do (apply #'user:grant user branches)))
 
 (defun user:action (user action public)
