@@ -143,8 +143,9 @@
 
 (defun user:add-default-permissions (&rest branches)
   (dolist (branch branches)
-    (pushnew (ensure-branch branch) *default-permissions*
-             :test #'branch-equal)))
+    (pushnew branch *default-permissions* :test #'branch-equal))
+  (loop for user being the hash-values of *user-cache*
+        do (apply #'user:grant user branches)))
 
 (defun user:action (user action public)
   (let ((user (ensure-user user)))
