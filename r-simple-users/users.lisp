@@ -88,7 +88,6 @@
 (defun user:remove (user)
   (let ((user (ensure-user user)))
     (db:with-transaction ()
-      (db:remove 'actions (db:query (:= 'uid (id user))))
       (db:remove 'fields (db:query (:= 'uid (id user))))
       (db:remove 'users (db:query (:= '_id (id user))))
       (trigger 'user:remove user)
@@ -149,22 +148,6 @@
         unless (eq user anonymous)
         do (apply #'user:grant user branches)))
 
-(defun user:action (user action public)
-  (let ((user (ensure-user user)))
-    (db:insert 'actions `((uid . ,(id user))
-                          (time . ,(get-universal-time))
-                          (public . ,(if public 1 0)) (action . ,action)))
-    (trigger 'user:action user action public)
-    user))
-
-(defun user:actions (user n &key (public T) oldest-first)
-  (let ((user (ensure-user user)))
-    (db:iterate 'actions (if public
-                             (db:query (:and (:= 'uid (id user)) (:= 'public 1)))
-                             (db:query (:and (:= 'uid (id user)))))
-      #'(lambda (ta) (gethash "action" ta))
-      :fields '(action) :amount n :sort `((time ,(if oldest-first :ASC :DESC))) :accumulate T)))
-
 (defun user::sync-user (username)
   (dm:with-model model ('users (db:query (:= 'username username)))
     (let ((user (make-instance 'user
@@ -202,7 +185,6 @@
 (define-trigger db:connected ()
   (db:create 'users '((username (:varchar 32)) (permissions :text)) :indices '(username))
   (db:create 'fields '((uid :integer) (field (:varchar 64)) (value :text)) :indices '(uid))
-  (db:create 'actions '((uid :integer) (time :integer) (public (:integer 1)) (action :text)) :indices '(uid))
   (user::sync)
   (trigger 'user:ready))
 
