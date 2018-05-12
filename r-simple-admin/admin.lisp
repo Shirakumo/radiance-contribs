@@ -17,7 +17,7 @@
   (declare (ignore args))
   (cond (category
          (make-uri :domains '("admin")
-                   :path (format NIL "~(/~a/~a~)" category panel)))
+                   :path (format NIL "~(~a/~a~)" category panel)))
         (T
          #@"admin/")))
 
