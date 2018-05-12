@@ -13,6 +13,9 @@
 
 (defvar *ldap*)
 
+(define-condition auth::invalid-password (error)
+  ())
+
 (defclass user (user:user)
   ((entry :initarg :entry :accessor entry)))
 
@@ -53,6 +56,45 @@
           ((T) (* 60 60 24 365 100))
           (otherwise auth:*login-timeout*)))
   (trigger 'auth:associate session))
+
+(defun cat-vec (&rest vecs)
+  (let ((arr (make-array (loop for v in vecs sum (length v))
+                         :element-type (array-element-type (first vecs)))))
+    (loop for i = 0 then (+ i (length v))
+          for v in vecs
+          do (replace arr v :start1 i))
+    arr))
+
+(defun hash-password (password &optional (salt (radiance:make-random-string 12)))
+  (let ((salt (etypecase salt
+                (null NIL)
+                (string (babel:string-to-octets salt))
+                ((simple-array (unsigned-byte 8)) salt)))
+        (pass (babel:string-to-octets password)))
+    (format NIL "~:[{SHA}~;{SSHA}~]~a" salt
+            (base64:usb8-array-to-base64-string
+             (cat-vec (ironclad:digest-sequence :sha1 (if salt (cat-vec pass salt) pass)) salt)))))
+
+(defun password-valid-p (hash password)
+  (cond ((string= "{SSHA}" hash :end2 6)
+         (let ((code (base64:base64-string-to-usb8-array (subseq hash 6))))
+           (string= hash (hash-password password (subseq code 20)))))
+        ((string= "{SHA}" hash :end2 5)
+         (string= hash (hash-password password NIL)))
+        (T
+         (error "Invalid hash."))))
+
+(defun auth::set-password (user password)
+  (let ((user (user::ensure user)))
+    (ldap:modify (entry user) *ldap*
+                 `((ldap:replace :userpassword ,(hash-password password))))
+    user))
+
+(defun auth::check-password (user password)
+  (let ((user (user::ensure user)))
+    (unless (password-valid-p (first (ldap:attr-value (entry user) :userpassword))
+                              password)
+      (error 'auth::invalid-password))))
 
 (defun user::default-perms ()
   (config :default-perms))
