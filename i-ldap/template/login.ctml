@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8"/>
+    <title>Login</title>
+    <link rel="stylesheet" type="text/css" @href="/static/i-ldap/auth.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Login</h1>
+    </header>
+    <c:when test="(post/get :error)"><div class="msg" lquery="(text (post/get :error))" /></c:when>
+    <main>
+      <c:if test="user">
+        <c:then>
+          <p>You are already logged in.</p>
+        </c:then>
+        <c:else>
+          <form @action="/api/auth/login" method="post">
+            <div class="row">
+              <label for="username">Username</label>
+              <input type="text" name="username" id="username" autofocus required />
+            </div>
+            <div class="row">
+              <label for="password">Password</label>
+              <input type="password" id="password" name="password" required />
+            </div>
+            <input type="hidden" name="nonce" value="?" lquery="(val (make-random-string))" />
+            <input type="hidden" name="browser" value="true" />
+            <input type="submit" value="Submit" />
+          </form>
+          <c:when test='(eql (mconfig :i-ldap :registration) :open)'>
+            <a @href="auth/register" id="register-link">Register an Account</a>
+          </c:when>
+          <c:when test='(mail:implementation)'>
+            <a @href="auth/recover" id="recover-link">Recover your Account</a>
+          </c:when>
+        </c:else>
+      </c:if>
+    </main>
+  </body>
+</html>

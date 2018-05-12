@@ -1,0 +1,54 @@
+(html
+ :font-family sans-serif
+ :background (hex 000000)
+ :color (hex FFFFFF)
+ (body
+  :margin 0
+  :font-size 12pt
+  :padding 2em 0 0 0
+  (header
+   :background (hex 151515)
+   :border-bottom 3px solid (hex 0088EE)
+   :text-align center
+   :padding 0.5em 2em 0.5em 2em
+   (h1 :margin 0))
+  (.msg
+   :padding 0
+   :text-align center
+   :font-weight bold
+   :font-size 1.2em
+   :background (hex AA0000)
+   :padding 0.1em 1em 0.1em 1em
+   :margin 0 auto 0 auto
+   :max-width 400px)
+  (main
+   :margin 0 auto 0 auto
+   :max-width 400px
+   :background (hex FFFFFF)
+   :color (hex 000000)
+   :padding 1em
+   :font-size 1.2em
+   (code
+    :padding 0.1em 0.2em 0.1em 0.2em
+    :color (hex 000000)
+    :background (hex CCCCCC)
+    :border-radius 0.2em)
+   (form
+    (.row
+     :display flex
+     :padding 2px 0 2px 0
+     (label :min-width 8em)
+     (input :flex-grow 1))
+    (input
+     :border 1px solid (hex AAAAAA)
+     :padding 0 0 0 0.1em
+     :font-size inherit
+     :background (hex F0F0F0))
+    (input[type=submit]
+     :background (hex 0088EE)
+     :color (hex FFFFFF)
+     :font-weight bold
+     :width 100%
+     :box-sizing border-box
+     :cursor pointer
+     :border none)))))

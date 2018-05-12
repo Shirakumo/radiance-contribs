@@ -13,11 +13,12 @@
 
 (defvar *ldap*)
 
-(define-condition auth::invalid-password (error)
-  ())
+(define-condition auth::invalid-password (api-error)
+  ()
+  (:default-initargs :message "Invalid username or password."))
 
-(defclass user (user:user)
-  ((entry :initarg :entry :accessor entry)))
+(defclass user (user:user ldap:entry)
+  ())
 
 (defmethod print-object ((user user) stream)
   (print-unreadable-object (user stream :type T)
@@ -31,6 +32,20 @@
   (defaulted-config NIL :ldap :user)
   (defaulted-config NIL :ldap :pass)
   (defaulted-config "inetOrgPerson" :account :object-class)
+  (defaulted-config :closed :account :registration)
+  (defaulted-config "Radiance Account Recovery" :account :recovery :subject)
+  (defaulted-config "Hi, ~a.
+
+An account recovery was recently requested. If this was you, please
+use the following link to recover our account. If you did not request
+a recovery, you can simply ignore this email.
+
+    ~a
+
+Note that the recovery link will expire after 24 hours and you will
+not be sent a new mail before then."
+                    :account :recovery :message)
+  (defaulted-config (list "auth.change-password.") :account :default-perms)
   (setf *ldap* (ldap:new-ldap :host (config :ldap :host)
                               :port (config :ldap :port)
                               :sslflag (config :ldap :ssl)
@@ -86,21 +101,42 @@
 
 (defun auth::set-password (user password)
   (let ((user (user::ensure user)))
-    (ldap:modify (entry user) *ldap*
+    (ldap:modify user *ldap*
                  `((ldap:replace :userpassword ,(hash-password password))))
     user))
 
 (defun auth::check-password (user password)
   (let ((user (user::ensure user)))
-    (unless (password-valid-p (first (ldap:attr-value (entry user) :userpassword))
+    (unless (password-valid-p (first (ldap:attr-value user :userpassword))
                               password)
       (error 'auth::invalid-password))))
 
+(defun auth::recovery-active-p (user)
+  (let* ((user (user::ensure user))
+         (recovery (ldap:attr-value user :accountrecovery)))
+    (not (null recovery))))
+
+(defun auth::create-recovery (user)
+  (let ((user (user::ensure user))
+        (recovery (make-random-string :length 64)))
+    (ldap:modify user *ldap* `((ldap:add :accountrecovery ,recovery)))
+    recovery))
+
+(defun auth::recover (user code)
+  (let* ((user (user::ensure user))
+         (recovery (find code (ldap:attr-value user :accountrecovery) :test #'string=))
+         (new (make-random-string)))
+    (unless recovery
+      (error 'api-error :message "Invalid username or code."))
+    (ldap:modify user *ldap* `((ldap:delete :accountrecovery ,recovery)))
+    (auth::set-password user new)
+    new))
+
 (defun user::default-perms ()
-  (config :default-perms))
+  (config :account :default-perms))
 
 (defun (setf user::default-perms) (value)
-  (setf (config :default-perms)
+  (setf (config :account :default-perms)
         (mapcar #'encode-branch value)))
 
 (defun user::ensure (thing)
@@ -152,12 +188,12 @@
 
 (defun user:remove (user)
   (let ((user (user::ensure user)))
-    (ldap:delete (entry user) *ldap*)
+    (ldap:delete user *ldap*)
     NIL))
 
 (defun user:username (user)
   (let ((user (user::ensure user)))
-    (first (ldap:attr-value (entry user) :accountname))))
+    (first (ldap:attr-value user :accountname))))
 
 (defun encode-field (field &optional value)
   (with-output-to-string (out)
@@ -182,22 +218,22 @@
 
 (defun user:fields (user)
   (let ((user (user::ensure user)))
-    (mapcar #'decode-field (ldap:attr-value (entry user) :accountfield))))
+    (mapcar #'decode-field (ldap:attr-value user :accountfield))))
 
 (defun user:field (field user)
   (let ((user (user::ensure user))
         (enc (encode-field field)))
-    (dolist (value (ldap:attr-value (entry user) :accountfield))
+    (dolist (value (ldap:attr-value user :accountfield))
       (when (string= enc value :end2 (length enc))
         (return (nth-value 1 (decode-field value)))))))
 
 (defun (setf user:field) (value field user)
   (let* ((user (user::ensure user))
          (enc (encode-field field))
-         (prev (dolist (value (ldap:attr-value (entry user) :accountfield))
+         (prev (dolist (value (ldap:attr-value user :accountfield))
                  (when (string= enc value :end2 (length enc))
                    (return value)))))
-    (ldap:modify (entry user) *ldap*
+    (ldap:modify user *ldap*
                  (if prev
                      `((ldap:delete :accountfield ,prev)
                        (ldap:add :accountfield ,(encode-field field value)))
@@ -206,7 +242,7 @@
 
 (defun user:remove-field (field user)
   (let ((user (user::ensure user)))
-    (ldap:modify (entry user) *ldap* `((ldap:delete :accountfield ,(user:field field user))))
+    (ldap:modify user *ldap* `((ldap:delete :accountfield ,(user:field field user))))
     user))
 
 (defun encode-branch (branch)
@@ -217,7 +253,7 @@
 (defun user:check (user branch)
   (let* ((user (user::ensure user))
          (branch (encode-branch branch))
-         (branches (ldap:attr-value (entry user) :accountpermission)))
+         (branches (ldap:attr-value user :accountpermission)))
     (dolist (b branches)
       (when (and (<= (length b) (length branch))
                  (string= b branch :end2 (length b)))
@@ -225,7 +261,7 @@
 
 (defun user:grant (user &rest branches)
   (let ((user (user::ensure user)))
-    (ldap:modify (entry user) *ldap*
+    (ldap:modify user *ldap*
                  (loop for branch in branches
                        collect `(ldap:add :accountpermission ,(encode-branch branch))))
     user))
@@ -233,12 +269,12 @@
 (defun user:revoke (user &rest branches)
   (let* ((user (user::ensure user))
          (mods ()))
-    (dolist (g (ldap:attr-value (entry user) :accountpermission))
+    (dolist (g (ldap:attr-value user :accountpermission))
       (dolist (r (mapcar #'encode-branch branches))
         (when (and (<= (length r) (length g))
                    (string= r g :end2 (length r)))
           (push `(ldap:delete :accountpermission ,g) mods))))
-    (ldap:modify (entry user) *ldap* mods)
+    (ldap:modify user *ldap* mods)
     user))
 
 (defun user:add-default-permissions (&rest branches)

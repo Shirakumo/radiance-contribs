@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8"/>
+    <title>Register</title>
+    <link rel="stylesheet" type="text/css" @href="/static/i-ldap/auth.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Register</h1>
+    </header>
+    <c:when test="msg"><div class="msg" lquery="(html (r-ratify:present-error msg))" /></c:when>
+    <main>
+      <c:if test="nonce">
+        <c:then>
+          <c:if test="user">
+            <c:then>
+              <p>You are already logged in.</p>
+            </c:then>
+            <c:else>
+              <form action="#" method="post">
+                <div class="row">
+                  <label for="username">Username</label>
+                  <input type="text" id="username" name="username" title="Choose a username of up to 32 characters." pattern=".{1,32}" autofocus required
+                         lquery="(val (post-var :username))" />
+                </div>
+                <div class="row">
+                  <label for="email">E-Mail</label>
+                  <input type="email" id="email" name="email" title="Please specify a valid e-mail address." placeholder="mr-happy@example.com" pattern=".{3,32}" required
+                         lquery="(val (post-var :email))" />
+                </div>
+                <div class="row">
+                  <label for="password">Password</label>
+                  <input type="password" id="password" name="password" title="Set a password between 8 and 64 characters." placeholder="some物_thatOnly 1 KNOW" pattern=".{8,64}" required />
+                </div>
+                <div class="row">
+                  <label for="repeat">Repeat</label>
+                  <input type="password" id="repeat" name="repeat" title="Repeat your password here." pattern=".{8,64}" required /><br />
+                </div>
+                <input type="text" name="firstname" value="?" style="display:none;" required lquery="(val nonce)" />
+                <input type="submit" name="action" value="Register" />
+              </form>
+            </c:else>
+          </c:if>
+        </c:then>
+        <c:else>
+          <p>Registration is closed.</p>
+        </c:else>
+      </c:if>
+    </main>
+  </body>
+</html>

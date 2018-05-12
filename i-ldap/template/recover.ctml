@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8"/>
+    <title>Recover Account</title>
+    <link rel="stylesheet" type="text/css" @href="/static/i-ldap/auth.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Recover Account</h1>
+    </header>
+    <c:when test="(post/get :error)"><div class="msg" lquery="(text (post/get :error))" /></c:when>
+    <main>
+      <c:if test="user">
+        <c:then>
+          <p>You are already logged in.</p>
+        </c:then>
+        <c:else>
+          <form @action="/api/auth/request-recovery" method="post">
+            <div class="row">
+              <label for="username">Username</label>
+              <input type="text" name="username" id="username" autofocus required />
+            </div>
+            <input type="hidden" name="browser" value="true" />
+            <input type="submit" value="Submit" />
+          </form>
+          <p>You will be sent an email with a link to recover your account. Note that the link will expire in some time.</p>
+        </c:else>
+      </c:if>
+      <c:when test="password">
+        <p>Your password has been set to <code lquery="(text password)">PASS</code>. Please remember it.</p>
+      </c:when>
+    </main>
+  </body>
+</html>

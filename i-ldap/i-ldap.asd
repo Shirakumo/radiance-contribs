@@ -12,8 +12,13 @@
   :version "1.0.0"
   :description "Radiance authentication implementation using an LDAP backend."
   :serial T
-  :components ((:file "ldap"))
-  :depends-on (:trivial-ldap
+  :components ((:file "ldap")
+               (:file "frontend"))
+  :depends-on ((:interface :session)
+               :r-clip
+               :r-ratify
+               :trivial-ldap
                :ironclad
                :babel
-               :base64))
+               :cl-base64
+               :crypto-shortcuts))
