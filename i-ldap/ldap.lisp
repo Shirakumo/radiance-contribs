@@ -16,6 +16,10 @@
 (defclass user (user:user)
   ((entry :initarg :entry :accessor entry)))
 
+(defmethod print-object ((user user) stream)
+  (print-unreadable-object (user stream :type T)
+    (format stream "~a" (user:username user))))
+
 (define-trigger server-start ()
   (defaulted-config "localhost" :ldap :host)
   (defaulted-config ldap::+ldap-port-no-ssl+ :ldap :port)
@@ -23,7 +27,7 @@
   (defaulted-config NIL :ldap :base)
   (defaulted-config NIL :ldap :user)
   (defaulted-config NIL :ldap :pass)
-  (defaulted-config "inetOrgPerson")
+  (defaulted-config "inetOrgPerson" :account :object-class)
   (setf *ldap* (ldap:new-ldap :host (config :ldap :host)
                               :port (config :ldap :port)
                               :sslflag (config :ldap :ssl)
@@ -32,12 +36,15 @@
                               :pass (config :ldap :pass)))
   (ldap:bind *ldap*))
 
+(define-trigger server-stop ()
+  (ldap:unbind *ldap*))
+
 (defun auth:current (&optional default (session (session:get)))
   (or (session:field session 'user)
       (and default (user:get default :if-does-not-exist :error))))
 
 (defun auth:associate (user &optional (session (session:get)))
-  (v:info :auth "Associating ~a with ~a and prolonging for ~a"
+  (l:info :auth "Associating ~a with ~a and prolonging for ~a"
           session user auth:*login-timeout*)
   (setf (session:field session 'user) user)
   (incf (session:timeout session)
@@ -47,11 +54,12 @@
           (otherwise auth:*login-timeout*)))
   (trigger 'auth:associate session))
 
-(defun default-perms ()
-  )
+(defun user::default-perms ()
+  (config :default-perms))
 
-(defun (setf default-perms) (value)
-  )
+(defun (setf user::default-perms) (value)
+  (setf (config :default-perms)
+        (mapcar #'encode-branch value)))
 
 (defun user::ensure (thing)
   (etypecase thing
@@ -59,12 +67,15 @@
     (string (user:get thing :if-does-not-exist :error))))
 
 (defun user:= (a b)
-  (equal (user:username a)
-         (user:username b)))
+  (string= (user:username a)
+           (user:username b)))
 
 (defun user:list ()
-  (ldap:dosearch (entry '(= objectclass radianceaccount))
-    (make-instance 'user :entry entry)))
+  (let ((users ()))
+    (ldap:dosearch (entry (ldap:search *ldap* '(= objectclass radianceaccount)
+                                       :size-limit 0 :paging-size 1000))
+      (push (make-instance 'user :entry entry) users))
+    users))
 
 (defun user::create (username &key (if-exists :error))
   (let ((user (user:get username)))
@@ -72,21 +83,25 @@
       (ecase if-exists
         (:supersede (user::remove user))
         (:error (error 'user::already-exists :name username))
-        (:ignore (return-from 'user::create user))
-        ((NIL :NIL) (return-from 'user::create NIL))))
-    (let ((entry (ldap:new-entry username
-                                 :attrs `(("objectClass" . "radianceAccount")
-                                          ("accountName" . ,username)
-                                          ("cn" . ,username)
-                                          ("sn" . ,username)
-                                          ,(default-perms)))))
-      (ldap:add *ldap* entry)
-      (make-instance 'user entry))))
+        (:ignore (return-from user::create user))
+        ((NIL :NIL) (return-from user::create NIL))))
+    (let ((entry (ldap:new-entry (format NIL "cn=~a~@[,~a~]" username (config :ldap :base))
+                                 :attrs `((:objectclass ,(config :account :object-class)
+                                                        "radianceAccount")
+                                          (:cn . ,username)
+                                          (:sn . ,username)
+                                          (:accountname . ,username)
+                                          ,@(when (user::default-perms)
+                                              `((:accountpermission ,@(user::default-perms)))))
+                                 :infer-rdn NIL)))
+      (ldap:add entry *ldap*)
+      (make-instance 'user :entry entry))))
 
 (defun user:get (username &key (if-does-not-exist NIL))
-  (or (ldap:dosearch (user `(and (= objectclass radianceaccount)
-                                 (= accountname ,username)))
-        (return user))
+  (if (ldap:search *ldap* `(and (= objectclass "radianceAccount")
+                                (= accountname ,username))
+                   :size-limit 1)
+      (make-instance 'user :entry (ldap:next-search-result *ldap*))
       (ecase if-does-not-exist
         (:create (user::create username))
         (:error (error 'user:not-found :name username))
@@ -95,11 +110,12 @@
 
 (defun user:remove (user)
   (let ((user (user::ensure user)))
-    (ldap:delete *ldap* (entry user))))
+    (ldap:delete (entry user) *ldap*)
+    NIL))
 
 (defun user:username (user)
   (let ((user (user::ensure user)))
-    (ldap:attr-value (entry user) "accountName")))
+    (first (ldap:attr-value (entry user) :accountname))))
 
 (defun encode-field (field &optional value)
   (with-output-to-string (out)
@@ -123,54 +139,65 @@
                     while char do (write-char char out))))))
 
 (defun user:fields (user)
-  (let* ((user (user::ensure user))
-         (attr (ldap:attr-value (entry user) :accountfield)))
-    (loop for value in attr
-          collect (decode-field value))))
+  (let ((user (user::ensure user)))
+    (mapcar #'decode-field (ldap:attr-value (entry user) :accountfield))))
 
 (defun user:field (field user)
   (let ((user (user::ensure user))
         (enc (encode-field field)))
     (dolist (value (ldap:attr-value (entry user) :accountfield))
       (when (string= enc value :end2 (length enc))
-        (nth-value 1 (decode-value value))))))
+        (return (nth-value 1 (decode-field value)))))))
 
 (defun (setf user:field) (value field user)
-  (let ((user (user::ensure user)))
-    (ldap:modify *ldap* (entry user) `((ldap:delete "accountField" ,(user:field field user))
-                                       (ldap:add "accountField" ,(encode-field field value))))))
+  (let* ((user (user::ensure user))
+         (enc (encode-field field))
+         (prev (dolist (value (ldap:attr-value (entry user) :accountfield))
+                 (when (string= enc value :end2 (length enc))
+                   (return value)))))
+    (ldap:modify (entry user) *ldap*
+                 (if prev
+                     `((ldap:delete :accountfield ,prev)
+                       (ldap:add :accountfield ,(encode-field field value)))
+                     `((ldap:add :accountfield ,(encode-field field value)))))
+    value))
 
 (defun user:remove-field (field user)
   (let ((user (user::ensure user)))
-    (ldap:modify *ldap* (entry user) `((ldap:delete "accountField" ,(user:field field user))))))
+    (ldap:modify (entry user) *ldap* `((ldap:delete :accountfield ,(user:field field user))))
+    user))
 
 (defun encode-branch (branch)
   (etypecase branch
-    (string branch)
-    (list (format NIL "~{~a~^.~}" branch))))
-
-(defun matching-branches (a b)
-  )
+    (string (format NIL "~a." branch))
+    (list (format NIL "~{~a.~}" branch))))
 
 (defun user:check (user branch)
   (let* ((user (user::ensure user))
+         (branch (encode-branch branch))
          (branches (ldap:attr-value (entry user) :accountpermission)))
-    (not (null (matching-branches branches (list branch))))))
+    (dolist (b branches)
+      (when (and (<= (length b) (length branch))
+                 (string= b branch :end2 (length b)))
+        (return user)))))
 
 (defun user:grant (user &rest branches)
   (let ((user (user::ensure user)))
-    (ldap:modify *ldap* (entry user)
+    (ldap:modify (entry user) *ldap*
                  (loop for branch in branches
-                       collect `(ldap:add "accountPermission" ,(encode-branch branch))))))
+                       collect `(ldap:add :accountpermission ,(encode-branch branch))))
+    user))
 
 (defun user:revoke (user &rest branches)
   (let* ((user (user::ensure user))
-         (branches (ldap:attr-value (entry user) :accountpermission)))
-    (ldap:modify *ldap* (entry user)
-                 (loop for branch in (matching-branches branches perms)
-                       collect `(ldap:delete "accountPermission" ,(encode-branch branch))))))
+         (mods ()))
+    (dolist (g (ldap:attr-value (entry user) :accountpermission))
+      (dolist (r (mapcar #'encode-branch branches))
+        (when (and (<= (length r) (length g))
+                   (string= r g :end2 (length r)))
+          (push `(ldap:delete :accountpermission ,g) mods))))
+    (ldap:modify (entry user) *ldap* mods)
+    user))
 
 (defun user:add-default-permissions (&rest branches)
-  (setf (default-perms)
-        (append branches
-                (default-perms))))
+  (setf (user::default-perms) (append branches (user::default-perms))))
