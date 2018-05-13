@@ -157,24 +157,29 @@ body{
 #panel #manage:after{
     content: "";
     position: absolute;
-    bottom: 0;right:-25px;
+    bottom: 0;right:-30px;
     width: 0;height: 0; 
-    border-top: 25px solid transparent;
-    border-left: 25px solid #AA0000;
+    border-top: 30px solid transparent;
+    border-left: 30px solid #AA0000;
 }
 
-#panel #manage button{
+#panel #manage button, #panel #manage a{
     border: none;
-    width: 25px;
-    height: 25px;
+    vertical-align: middle;
     margin: 0;
     text-align: center;
     background: transparent;
     color: #FFF;
-    font-size: 10pt;
+    font-size: 22px;
+    margin: 0;
+    box-sizing: border-box;
+    padding: 2px 6px 2px 6px;
+    display: inline-block;
 }
 
-#panel #manage button:hover{
+#panel #manage i { padding: 0; }
+
+#panel #manage button:hover, #panel #manage a:hover{
     background: #FF0000;
 }
 
