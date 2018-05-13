@@ -128,7 +128,8 @@
      :category category
      :panel panel
      :panels (loop for category in *panels*
-                   when (user:check (auth:current) (access category))
+                   when (or (not (access category))
+                            (user:check (auth:current) (access category)))
                    collect `(:name ,(name category)
                              :panels ,(loop for panel in (panels category)
                                             when (user:check (auth:current) (access panel))
