@@ -8,6 +8,15 @@
 
 (defvar *nonce-salt* (make-random-string))
 
+(define-resource-locator auth page (page &optional landing)
+  (cond ((find page '("login" "logout" "register" "recover") :test #'string-equal)
+         (values (make-uri :domains '("auth") :path page)
+                 `(("landing-page" . ,(etypecase landing
+                                        (null "")
+                                        (string (if (string= landing "#") "REFERER" landing))
+                                        (uri (uri-to-url landing :representation :external)))))))
+        (T (call-default-locator))))
+
 (defun redirect-to-landing (&optional (other #@"/"))
   (let ((landing (or (post/get "landing-page")
                      (session:field 'landing-page)
@@ -28,7 +37,7 @@
     (auth::check-password user password)
     (auth:associate user)
     (if (string= "true" (post/get "browser"))
-        (redirect-to-landing (if (admin:implementation) #@"admin/" #@"/"))
+        (redirect-to-landing (if (admin:implementation) (resource :admin :page) #@"/"))
         (api-output "Login successful."))))
 
 (define-api auth/logout () ()
@@ -72,17 +81,18 @@
     (let ((new-pw (auth::recover user code)))
       (auth:associate user)
       (if (string= "true" (post/get "browser"))
-          (redirect-to-landing (if (admin:implementation)
-                                   (multiple-value-bind (uri query fragment)
-                                       (resource :admin :page "settings" "password")
-                                     (uri-to-url uri
-                                                 :representation :external
-                                                 :query `(("password" . ,new-pw)
-                                                          ,@query)
-                                                 :fragment fragment))
-                                   (uri-to-url "auth/recover"
-                                               :representation :external
-                                               :query `(("password" . ,new-pw)))))
+          (redirect-to-landing
+           (if (admin:implementation)
+               (multiple-value-bind (uri query fragment)
+                   (resource :admin :page "settings" "password")
+                 (uri-to-url uri
+                             :representation :external
+                             :query `(("password" . ,new-pw)
+                                      ,@query)
+                             :fragment fragment))
+               (uri-to-url "auth/recover"
+                           :representation :external
+                           :query `(("password" . ,new-pw)))))
           (api-output new-pw)))))
 
 (define-page login "auth/login" (:clip "login.ctml")
@@ -117,7 +127,7 @@
                  (setf (user:field "email" user) email)
                  (auth::set-password user password)
                  (auth:associate user)
-                 (redirect-to-landing))))))
+                 (redirect-to-landing (if (admin:implementation) (resource :admin :page) #@"/")))))))
        (let ((nonce (make-random-string)))
          (setf (session:field :nonce-hash) (cryptos:pbkdf2-hash nonce *nonce-salt*)
                (session:field :nonce-salt) *nonce-salt*)
@@ -127,9 +137,10 @@
             :nonce nonce))))))
 
 (define-page recover "auth/recover" (:clip "recover.ctml")
+  (maybe-save-landing)
   (r-clip:process
    T :password (post/get "password")
-     :user (auth:current)))
+   :user (auth:current)))
 
 (define-implement-trigger admin
   (admin:define-panel settings password (:access (perm auth change-password)

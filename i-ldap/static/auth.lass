@@ -28,6 +28,20 @@
    :color (hex 000000)
    :padding 1em
    :font-size 1.2em
+   (.button-row
+    :margin-top 1em
+    :display flex
+    (.button :flex-grow 1))
+   (.button
+    :text-decoration none
+    :text-align center
+    :color (hex FFFFFF)
+    :background (hex 555555)
+    :display inline-block
+    :margin 0.1em
+    :padding 0.1em 0.2em 0.1em 0.2em
+    :box-sizing border-box
+    :cursor pointer)
    (code
     :padding 0.1em 0.2em 0.1em 0.2em
     :color (hex 000000)
@@ -46,9 +60,6 @@
      :background (hex F0F0F0))
     (input[type=submit]
      :background (hex 0088EE)
-     :color (hex FFFFFF)
      :font-weight bold
      :width 100%
-     :box-sizing border-box
-     :cursor pointer
      :border none)))))

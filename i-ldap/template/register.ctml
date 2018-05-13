@@ -38,7 +38,7 @@
                   <input type="password" id="repeat" name="repeat" title="Repeat your password here." pattern=".{8,64}" required /><br />
                 </div>
                 <input type="text" name="firstname" value="?" style="display:none;" required lquery="(val nonce)" />
-                <input type="submit" name="action" value="Register" />
+                <input type="submit" name="action" class="button" value="Register" />
               </form>
             </c:else>
           </c:if>

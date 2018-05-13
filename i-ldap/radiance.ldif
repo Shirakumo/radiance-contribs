@@ -1,0 +1,47 @@
+dn: cn=radiance,cn=schema,cn=config
+objectClass: olcSchemaConfig
+cn: radiance
+olcAttributeTypes: ( 1.3.6.1.4.1.51968.1.0 NAME 'accountID'
+ DESC 'The unique integer identifying this user account.' 
+ SUP uidNumber 
+ SINGLE-VALUE 
+ USAGE userApplications ) 
+olcAttributeTypes: ( 1.3.6.1.4.1.51968.1.1 NAME 'accountName'
+ DESC 'The name for this user used throughout the radiance installation.' 
+ EQUALITY caseIgnoreMatch 
+ ORDERING caseIgnoreOrderingMatch 
+ SUBSTR caseIgnoreSubstringsMatch 
+ SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 
+ SINGLE-VALUE 
+ USAGE userApplications ) 
+olcAttributeTypes: ( 1.3.6.1.4.1.51968.1.2 NAME 'accountField'
+ DESC 'An arbitrary key/value field on the user account.' 
+ EQUALITY caseExactMatch 
+ ORDERING caseExactOrderingMatch 
+ SUBSTR caseExactSubstringsMatch 
+ SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 
+ USAGE userApplications ) 
+olcAttributeTypes: ( 1.3.6.1.4.1.51968.1.3 NAME 'accountPermission'
+ DESC 'A permissions branch that has been granted.' 
+ EQUALITY caseExactMatch 
+ ORDERING caseExactOrderingMatch 
+ SUBSTR caseExactSubstringsMatch 
+ SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 
+ USAGE userApplications ) 
+olcAttributeTypes: ( 1.3.6.1.4.1.51968.1.4 NAME 'accountRecovery'
+ DESC 'Field for the recovery code when an account recovery has been requested.' 
+ EQUALITY caseExactMatch 
+ ORDERING caseExactOrderingMatch 
+ SUBSTR caseExactSubstringsMatch 
+ SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 
+ SINGLE-VALUE 
+ USAGE userApplications ) 
+olcObjectClasses: ( 1.3.6.1.4.1.51968.2.0 NAME 'radianceNextID'
+ DESC 'Counter object for the next accountID' 
+ STRUCTURAL 
+ MUST ( cn $ accountID ) ) 
+olcObjectClasses: ( 1.3.6.1.4.1.51968.2.1 NAME 'radianceAccount'
+ DESC 'An account in a Radiance installation.' 
+ AUXILIARY 
+ MUST ( accountName $ accountID ) 
+ MAY ( accountField $ accountPermission ) ) 

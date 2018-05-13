@@ -22,7 +22,7 @@
               <input type="text" name="username" id="username" autofocus required />
             </div>
             <input type="hidden" name="browser" value="true" />
-            <input type="submit" value="Submit" />
+            <input type="submit" class="button" value="Submit" />
           </form>
           <p>You will be sent an email with a link to recover your account. Note that the link will expire in some time.</p>
         </c:else>

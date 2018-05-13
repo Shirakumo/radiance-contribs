@@ -12,6 +12,21 @@
 (in-package #:i-ldap)
 
 (defvar *ldap*)
+(defvar *lock* (bt:make-lock "LDAP lock"))
+(defvar *locked* NIL)
+
+;; FIXME: This is obviously inefficient since it
+;;        bottlenecks everything to a single thread
+;;        but doing it multi-threaded causes bad shit
+(defmacro with-ldap (() &body body)
+  (let ((thunk (gensym "THUNK")))
+    `(flet ((,thunk ()
+              ,@body))
+       (if *locked*
+           (,thunk)
+           (bt:with-lock-held (*lock*)
+             (let ((*locked* T))
+               (,thunk)))))))
 
 (define-condition auth::invalid-password (api-error)
   ()
@@ -45,16 +60,29 @@ a recovery, you can simply ignore this email.
 Note that the recovery link will expire after 24 hours and you will
 not be sent a new mail before then."
                     :account :recovery :message)
-  (defaulted-config (list "auth.change-password.") :account :default-perms)
   (setf *ldap* (ldap:new-ldap :host (config :ldap :host)
                               :port (config :ldap :port)
                               :sslflag (config :ldap :ssl)
                               :base (config :ldap :base)
                               :user (config :ldap :user)
                               :pass (config :ldap :pass)))
-  (ldap:bind *ldap*))
+  (ldap:bind *ldap*)
+  (with-ldap ()
+    (unless (ldap:search *ldap* '(= "objectClass" "radianceNextID") :size-limit 1)
+      (ldap:add (ldap:new-entry (format NIL "cn=radianceNextID~@[,~a~]" (config :ldap :base))
+                                :attrs '(("objectClass" . "radianceNextID")
+                                         ("cn" . "radianceNextID")
+                                         ("accountID" . "0"))
+                                :infer-rdn NIL)
+                *ldap*))
+    (user::create "anonymous" :if-exists NIL))
+  ;; Set this after the anonymous user creation to ensure it does not
+  ;; get the password change permission.
+  (defaulted-config (list "auth.change-password.") :account :default-perms)
+  (trigger 'user:ready))
 
 (define-trigger server-stop ()
+  (trigger 'user:unready)
   (ldap:unbind *ldap*))
 
 (defun auth:current (&optional default (session (session:get)))
@@ -100,10 +128,11 @@ not be sent a new mail before then."
          (error "Invalid hash."))))
 
 (defun auth::set-password (user password)
-  (let ((user (user::ensure user)))
-    (ldap:modify user *ldap*
-                 `((ldap:replace :userpassword ,(hash-password password))))
-    user))
+  (with-ldap ()
+    (let ((user (user::ensure user)))
+      (ldap:modify user *ldap*
+                   `((ldap:replace :userpassword ,(hash-password password))))
+      user)))
 
 (defun auth::check-password (user password)
   (let ((user (user::ensure user)))
@@ -117,20 +146,33 @@ not be sent a new mail before then."
     (not (null recovery))))
 
 (defun auth::create-recovery (user)
-  (let ((user (user::ensure user))
-        (recovery (make-random-string :length 64)))
-    (ldap:modify user *ldap* `((ldap:add :accountrecovery ,recovery)))
-    recovery))
+  (with-ldap ()
+    (let ((user (user::ensure user))
+          (recovery (make-random-string :length 64)))
+      (ldap:modify user *ldap* `((ldap:add :accountrecovery ,recovery)))
+      recovery)))
 
 (defun auth::recover (user code)
-  (let* ((user (user::ensure user))
-         (recovery (find code (ldap:attr-value user :accountrecovery) :test #'string=))
-         (new (make-random-string)))
-    (unless recovery
-      (error 'api-error :message "Invalid username or code."))
-    (ldap:modify user *ldap* `((ldap:delete :accountrecovery ,recovery)))
-    (auth::set-password user new)
-    new))
+  (with-ldap ()
+    (let* ((user (user::ensure user))
+           (recovery (find code (ldap:attr-value user :accountrecovery) :test #'string=))
+           (new (make-random-string)))
+      (unless recovery
+        (error 'api-error :message "Invalid username or code."))
+      (ldap:modify user *ldap* `((ldap:delete :accountrecovery ,recovery)))
+      (auth::set-password user new)
+      new)))
+
+(defun get-next-id ()
+  (with-ldap ()
+    (loop (unless (ldap:search *ldap* '(= "objectClass" "radianceNextID")
+                               :size-limit 1 :attributes '("accountID"))
+            (error "LDAP is missing the required radianceNextID object."))
+          (let* ((entry (ldap:next-search-result *ldap*))
+                 (id (parse-integer (first (ldap:attr-value entry :accountid)))))
+            (when (ldap:modify *ldap* entry `((ldap:delete "accountID" ,(princ-to-string id))
+                                              (ldap:add "accountID" ,(princ-to-string (1+ id)))))
+              (return id))))))
 
 (defun user::default-perms ()
   (config :account :default-perms))
@@ -150,50 +192,59 @@ not be sent a new mail before then."
 
 (defun user:list ()
   (let ((users ()))
-    (ldap:dosearch (entry (ldap:search *ldap* '(= objectclass radianceaccount)
-                                       :size-limit 0 :paging-size 1000))
-      (push (make-instance 'user :entry entry) users))
+    (with-ldap ()
+      (ldap:dosearch (entry (ldap:search *ldap* '(= objectclass radianceaccount)
+                                         :size-limit 0 :paging-size 1000))
+        (push (change-class entry 'user) users)))
     users))
 
 (defun user::create (username &key (if-exists :error))
-  (let ((user (user:get username)))
-    (when user
-      (ecase if-exists
-        (:supersede (user::remove user))
-        (:error (error 'user::already-exists :name username))
-        (:ignore (return-from user::create user))
-        ((NIL :NIL) (return-from user::create NIL))))
-    (let ((entry (ldap:new-entry (format NIL "cn=~a~@[,~a~]" username (config :ldap :base))
-                                 :attrs `((:objectclass ,(config :account :object-class)
-                                                        "radianceAccount")
-                                          (:cn . ,username)
-                                          (:sn . ,username)
-                                          (:accountname . ,username)
-                                          ,@(when (user::default-perms)
-                                              `((:accountpermission ,@(user::default-perms)))))
-                                 :infer-rdn NIL)))
-      (ldap:add entry *ldap*)
-      (make-instance 'user :entry entry))))
+  (with-ldap ()
+    (let ((user (user:get username)))
+      (when user
+        (ecase if-exists
+          (:supersede (user::remove user))
+          (:error (error 'user::already-exists :name username))
+          (:ignore (return-from user::create user))
+          ((NIL :NIL) (return-from user::create NIL))))
+      (let ((entry (ldap:new-entry (format NIL "cn=~a~@[,~a~]" username (config :ldap :base))
+                                   :attrs `((:objectclass ,(config :account :object-class)
+                                                          "radianceAccount")
+                                            (:cn . ,username)
+                                            (:sn . ,username)
+                                            (:accountid . ,(princ-to-string (get-next-id)))
+                                            (:accountname . ,username)
+                                            ,@(when (user::default-perms)
+                                                `((:accountpermission ,@(user::default-perms)))))
+                                   :infer-rdn NIL)))
+        (ldap:add entry *ldap*)
+        (change-class entry 'user)))))
 
 (defun user:get (username &key (if-does-not-exist NIL))
-  (if (ldap:search *ldap* `(and (= objectclass "radianceAccount")
-                                (= accountname ,username))
-                   :size-limit 1)
-      (make-instance 'user :entry (ldap:next-search-result *ldap*))
-      (ecase if-does-not-exist
-        (:create (user::create username))
-        (:error (error 'user:not-found :name username))
-        (:anonymous (user:get "anonymous"))
-        ((NIL :NIL)))))
+  (with-ldap ()
+    (if (ldap:search *ldap* `(and (= objectclass "radianceAccount")
+                                  (= accountname ,username))
+                     :size-limit 1)
+        (change-class (ldap:next-search-result *ldap*) 'user)
+        (ecase if-does-not-exist
+          (:create (user::create username))
+          (:error (error 'user:not-found :name username))
+          (:anonymous (user:get "anonymous"))
+          ((NIL :NIL))))))
 
 (defun user:remove (user)
-  (let ((user (user::ensure user)))
-    (ldap:delete user *ldap*)
-    NIL))
+  (with-ldap ()
+    (let ((user (user::ensure user)))
+      (ldap:delete user *ldap*)
+      NIL)))
 
 (defun user:username (user)
   (let ((user (user::ensure user)))
     (first (ldap:attr-value user :accountname))))
+
+(defun user::id (user)
+  (let ((user (user::ensure user)))
+    (first (ldap:attr-value user :accountid))))
 
 (defun encode-field (field &optional value)
   (with-output-to-string (out)
@@ -228,22 +279,24 @@ not be sent a new mail before then."
         (return (nth-value 1 (decode-field value)))))))
 
 (defun (setf user:field) (value field user)
-  (let* ((user (user::ensure user))
-         (enc (encode-field field))
-         (prev (dolist (value (ldap:attr-value user :accountfield))
-                 (when (string= enc value :end2 (length enc))
-                   (return value)))))
-    (ldap:modify user *ldap*
-                 (if prev
-                     `((ldap:delete :accountfield ,prev)
-                       (ldap:add :accountfield ,(encode-field field value)))
-                     `((ldap:add :accountfield ,(encode-field field value)))))
-    value))
+  (with-ldap ()
+    (let* ((user (user::ensure user))
+           (enc (encode-field field))
+           (prev (dolist (value (ldap:attr-value user :accountfield))
+                   (when (string= enc value :end2 (length enc))
+                     (return value)))))
+      (ldap:modify user *ldap*
+                   (if prev
+                       `((ldap:delete :accountfield ,prev)
+                         (ldap:add :accountfield ,(encode-field field value)))
+                       `((ldap:add :accountfield ,(encode-field field value)))))
+      value)))
 
 (defun user:remove-field (field user)
-  (let ((user (user::ensure user)))
-    (ldap:modify user *ldap* `((ldap:delete :accountfield ,(user:field field user))))
-    user))
+  (with-ldap ()
+    (let ((user (user::ensure user)))
+      (ldap:modify user *ldap* `((ldap:delete :accountfield ,(user:field field user))))
+      user)))
 
 (defun encode-branch (branch)
   (etypecase branch
@@ -260,22 +313,24 @@ not be sent a new mail before then."
         (return user)))))
 
 (defun user:grant (user &rest branches)
-  (let ((user (user::ensure user)))
-    (ldap:modify user *ldap*
-                 (loop for branch in branches
-                       collect `(ldap:add :accountpermission ,(encode-branch branch))))
-    user))
+  (with-ldap ()
+    (let ((user (user::ensure user)))
+      (ldap:modify user *ldap*
+                   (loop for branch in branches
+                         collect `(ldap:add :accountpermission ,(encode-branch branch))))
+      user)))
 
 (defun user:revoke (user &rest branches)
-  (let* ((user (user::ensure user))
-         (mods ()))
-    (dolist (g (ldap:attr-value user :accountpermission))
-      (dolist (r (mapcar #'encode-branch branches))
-        (when (and (<= (length r) (length g))
-                   (string= r g :end2 (length r)))
-          (push `(ldap:delete :accountpermission ,g) mods))))
-    (ldap:modify user *ldap* mods)
-    user))
+  (with-ldap ()
+    (let* ((user (user::ensure user))
+           (mods ()))
+      (dolist (g (ldap:attr-value user :accountpermission))
+        (dolist (r (mapcar #'encode-branch branches))
+          (when (and (<= (length r) (length g))
+                     (string= r g :end2 (length r)))
+            (push `(ldap:delete :accountpermission ,g) mods))))
+      (ldap:modify user *ldap* mods)
+      user)))
 
 (defun user:add-default-permissions (&rest branches)
   (setf (user::default-perms) (append branches (user::default-perms))))

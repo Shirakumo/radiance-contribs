@@ -27,14 +27,16 @@
             </div>
             <input type="hidden" name="nonce" value="?" lquery="(val (make-random-string))" />
             <input type="hidden" name="browser" value="true" />
-            <input type="submit" value="Submit" />
+            <input type="submit" class="button" value="Submit" />
           </form>
-          <c:when test='(eql (mconfig :i-ldap :registration) :open)'>
-            <a @href="auth/register" id="register-link">Register an Account</a>
-          </c:when>
-          <c:when test='(mail:implementation)'>
-            <a @href="auth/recover" id="recover-link">Recover your Account</a>
-          </c:when>
+          <div class="button-row">
+            <c:when test='(eql (mconfig :i-ldap :account :registration) :open)'>
+              <a @href="auth/register" id="register-link" class="button">Register an Account</a>
+            </c:when>
+            <c:when test='(mail:implementation)'>
+              <a @href="auth/recover" id="recover-link" class="button">Recover your Account</a>
+            </c:when>
+          </div>
         </c:else>
       </c:if>
     </main>
