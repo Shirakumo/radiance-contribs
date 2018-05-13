@@ -55,7 +55,7 @@
   (:method ((error string))
     error)
   (:method ((error error))
-    (princ-to-string error))
+    (plump:encode-entities (princ-to-string error)))
   (:method ((error unacceptable-field))
     (format NIL "Unacceptable value for the ~a.~@[ <span class=\"reason\">~a</span>~]"
             (form-field error) (present-error (reason error))))
