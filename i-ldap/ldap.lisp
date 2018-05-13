@@ -296,8 +296,12 @@ not be sent a new mail before then."
 
 (defun user:remove-field (field user)
   (with-ldap ()
-    (let ((user (user::ensure user)))
-      (ldap:modify user *ldap* `((ldap:delete :accountfield ,(user:field field user))))
+    (let* ((user (user::ensure user))
+           (enc (encode-field field))
+           (prev (dolist (value (ldap:attr-value user :accountfield))
+                   (when (string= enc value :end2 (length enc))
+                     (return value)))))
+      (ldap:modify user *ldap* `((ldap:delete :accountfield ,prev)))
       user)))
 
 (defun encode-branch (branch)
