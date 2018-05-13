@@ -86,13 +86,15 @@ not be sent a new mail before then."
   (ldap:unbind *ldap*))
 
 (defun auth:current (&optional default (session (session:get)))
-  (or (session:field session 'user)
-      (and default (user:get default :if-does-not-exist :error))))
+  (let ((user (session:field session 'user)))
+    (if user
+        (user:get user)
+        (and default (user:get default :if-does-not-exist :error)))))
 
 (defun auth:associate (user &optional (session (session:get)))
   (l:info :auth "Associating ~a with ~a and prolonging for ~a"
           session user auth:*login-timeout*)
-  (setf (session:field session 'user) user)
+  (setf (session:field session 'user) (user:username user))
   (incf (session:timeout session)
         (case auth:*login-timeout*
           ((NIL) 0)
