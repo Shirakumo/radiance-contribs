@@ -303,7 +303,10 @@ not be sent a new mail before then."
 (defun encode-branch (branch)
   (etypecase branch
     (string (format NIL "~a." branch))
-    (list (format NIL "~{~a.~}" branch))))
+    (list (with-output-to-string (out)
+            (dolist (item branch)
+              (write-string (string-downcase item) out)
+              (write-char #\. out))))))
 
 (defun user:check (user branch)
   (let* ((user (user::ensure user))
