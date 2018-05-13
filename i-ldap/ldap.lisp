@@ -317,8 +317,9 @@ not be sent a new mail before then."
          (branch (encode-branch branch))
          (branches (ldap:attr-value user :accountpermission)))
     (dolist (b branches)
-      (when (and (<= (length b) (length branch))
-                 (string= b branch :end2 (length b)))
+      (when (or (string= b ".")
+                (and (<= (length b) (length branch))
+                     (string= b branch :end2 (length b))))
         (return user)))))
 
 (defun user:grant (user &rest branches)
