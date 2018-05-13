@@ -15,7 +15,7 @@
 (admin:define-panel admin overview (:access () :icon "fa-home" :tooltip "Radiance overview info.")
   (r-clip:process
    (plump:parse
-    (if (user:check (or (auth:current) (user:get "anonymous"))
+    (if (user:check (auth:current (user:get "anonymous"))
                     (perm radiance admin))
         (@template "overview.ctml")
         (@template "overview-public.ctml")))))

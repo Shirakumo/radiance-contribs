@@ -389,6 +389,7 @@ body{
     background: #EEF;
     margin: 2px;
     padding-left: 2px;
+    box-sizing: border-box;
 }
 
 #content .box input[readonly], #content .box textarea[readonly], #content .box input[type='checkbox'][readonly],
