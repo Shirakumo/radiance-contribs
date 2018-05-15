@@ -18,9 +18,9 @@
         (T (call-default-locator))))
 
 (defun redirect-to-landing (&optional (other #@"/"))
-  (let ((landing (or (post/get "landing-page")
-                     (session:field 'landing-page)
-                     other)))
+  (let ((landing (or* (post/get "landing-page")
+                      (session:field 'landing-page)
+                      other)))
     (setf (session:field 'landing-page) NIL)
     (redirect landing)))
 
@@ -53,13 +53,23 @@
       (error 'api-error "The confirmation does not match the password."))
     (auth::check-password user old-password)
     (auth::set-password user new-password)
-    (api-output "Password changed.")))
+    (if (string= "true" (post/get "browser"))
+        (multiple-value-bind (uri query fragment)
+            (resource :admin :page "settings" "password")
+          (redirect (uri-to-url uri
+                                :representation :external
+                                :query `(("info" . "Your password has been changed.")
+                                         ,@query)
+                                :fragment fragment)))
+        (api-output "Password changed."))))
 
 (define-api auth/request-recovery (username) ()
   (when (auth:current) (error 'api-error :message "You are already logged in."))
   (let ((user (user:get username)))
     (unless (and user (mail:implementation))
       (error 'api-error :message "Recovery is not possible at this time."))
+    (when (auth::recovery-active-p user)
+      (error 'api-error :message "A recovery email has already been sent."))
     (let ((code (auth::create-recovery user)))
       (mail:send (user:field "email" user)
                  (config :account :recovery :subject)
@@ -70,7 +80,9 @@
                                                        ("username" . ,username)
                                                        ("code" . ,code)))))
       (if (string= "true" (post/get "browser"))
-          (redirect #@"auth/recover")
+          (redirect (uri-to-url #@"auth/recover"
+                                :representation :external
+                                :query `(("info" . "A recovery email has been sent."))))
           (api-output "Recovery email sent.")))))
 
 (define-api auth/recover (username code) ()
@@ -88,6 +100,7 @@
                  (uri-to-url uri
                              :representation :external
                              :query `(("password" . ,new-pw)
+                                      ("info" . "Please set your new password now.")
                                       ,@query)
                              :fragment fragment))
                (uri-to-url "auth/recover"
@@ -146,4 +159,6 @@
                                          :clip "settings.ctml"
                                          :icon "fa-key"
                                          :tooltip "Change your login password.")
-    (r-clip:process T)))
+    (r-clip:process
+     T :info (post/get "info")
+     :error (post/get "error"))))

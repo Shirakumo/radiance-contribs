@@ -4,10 +4,11 @@
   <c:when test="info"><div class="notice info" lquery="(text info)"></div></c:when>
   <form class="box" @action="/api/auth/change-password" method="post" autofill="off">
     <p>Passwords should be at least 8 characters long. You can use any characters you want in all of unicode!</p>
-    <label>Current Password:</label><input type="password" name="old" lquery='(val (post/get "password"))' /><br />
-    <label>New Password:</label><input type="password" name="new" placeholder="some尻_thatOnlyIKNOW" required pattern=".{8,}"/><br />
+    <label>Current Password:</label><input type="password" name="old-password" lquery='(val (post/get "password"))' /><br />
+    <label>New Password:</label><input type="password" name="new-password" placeholder="some物_thatOnly 1 KNOW" required pattern=".{8,}"/><br />
     <label>Repeat New:</label><input type="password" name="repeat" required pattern=".{8,}"/><br />
     <div class="actionbar">
+      <input type="hidden" name="browser" value="true" />
       <input type="submit" name="action" value="Save" />
     </div>
   </form>

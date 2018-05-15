@@ -44,4 +44,4 @@ olcObjectClasses: ( 1.3.6.1.4.1.51977.0.2.1 NAME 'radianceAccount'
  DESC 'An account in a Radiance installation.' 
  AUXILIARY 
  MUST ( accountName $ accountID ) 
- MAY ( accountField $ accountPermission ) ) 
+ MAY ( accountField $ accountPermission $ accountRecovery ) )

@@ -9,7 +9,8 @@
     <header>
       <h1>Recover Account</h1>
     </header>
-    <c:when test="(post/get :error)"><div class="msg" lquery="(text (post/get :error))" /></c:when>
+    <c:when test="(post/get :error)"><div class="msg error" lquery="(text (post/get :error))" /></c:when>
+    <c:when test="(post/get :info)"><div class="msg info" lquery="(text (post/get :info))" /></c:when>
     <main>
       <c:if test="user">
         <c:then>

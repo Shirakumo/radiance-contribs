@@ -48,6 +48,7 @@
   (defaulted-config NIL :ldap :pass)
   (defaulted-config "inetOrgPerson" :account :object-class)
   (defaulted-config :closed :account :registration)
+  (defaulted-config (* 24 60 60) :account :recovery :timeout)
   (defaulted-config "Radiance Account Recovery" :account :recovery :subject)
   (defaulted-config "Hi, ~a.
 
@@ -166,26 +167,32 @@ not be sent a new mail before then."
                               password)
       (error 'auth::invalid-password))))
 
-(defun auth::recovery-active-p (user)
+(defun auth::recovery-active-p (user &optional code)
   (let* ((user (user::ensure user))
-         (recovery (ldap:attr-value user :accountrecovery)))
-    (not (null recovery))))
+         (recovery (first (ldap:attr-value user :accountrecovery))))
+    (and recovery
+         (< (get-universal-time)
+            (parse-integer (subseq recovery 32) :radix 36))
+         (or (null code)
+             (string= code recovery)))))
 
 (defun auth::create-recovery (user)
   (with-ldap ()
     (let ((user (user::ensure user))
-          (recovery (make-random-string :length 64)))
-      (ldap:modify user *ldap* `((ldap:add :accountrecovery ,recovery)))
+          (recovery (format NIL "~a~36r"
+                            (make-random-string 32)
+                            (+ (get-universal-time)
+                               (config :account :recovery :timeout)))))
+      (ldap:modify user *ldap* `((ldap:replace :accountrecovery ,recovery)))
       recovery)))
 
 (defun auth::recover (user code)
   (with-ldap ()
-    (let* ((user (user::ensure user))
-           (recovery (find code (ldap:attr-value user :accountrecovery) :test #'string=))
-           (new (make-random-string)))
-      (unless recovery
+    (let ((user (user::ensure user))
+          (new (make-random-string)))
+      (unless (auth::recovery-active-p user code)
         (error 'api-error :message "Invalid username or code."))
-      (ldap:modify user *ldap* `((ldap:delete :accountrecovery ,recovery)))
+      (ldap:modify user *ldap* `((ldap:delete :accountrecovery ,code)))
       (auth::set-password user new)
       new)))
 
