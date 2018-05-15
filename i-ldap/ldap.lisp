@@ -53,7 +53,7 @@
   (defaulted-config "Hi, ~a.
 
 An account recovery was recently requested. If this was you, please
-use the following link to recover our account. If you did not request
+use the following link to recover your account. If you did not request
 a recovery, you can simply ignore this email.
 
     ~a
