@@ -340,10 +340,13 @@
 
 (defun user:grant (user &rest branches)
   (with-ldap ()
-    (let ((user (user::ensure user)))
+    (let* ((user (user::ensure user))
+           (existing (ldap:attr-value user :accountpermission)))
       (ldap:modify user *ldap*
-                   (loop for branch in branches
-                         collect `(ldap:add :accountpermission ,(encode-branch branch))))
+                   (loop for item in branches
+                         for branch = (encode-branch item)
+                         unless (find branch existing :test #'string=)
+                         collect `(ldap:add :accountpermission ,branch)))
       user)))
 
 (defun user:revoke (user &rest branches)
