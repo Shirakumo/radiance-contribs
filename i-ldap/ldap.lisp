@@ -266,7 +266,9 @@
 
 (defun encode-field (field &optional value)
   (with-output-to-string (out)
-    (loop for char across field
+    (loop for char across (etypecase field
+                            (symbol (string-downcase field))
+                            (string field))
           do (when (char= char #\=)
                (write-char #\\ out))
              (write-char char out))
