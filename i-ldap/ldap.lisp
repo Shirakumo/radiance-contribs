@@ -291,11 +291,15 @@
   (let ((user (user::ensure user)))
     (mapcar #'decode-field (ldap:attr-value user :accountfield))))
 
+(defun prefix-p (prefix string)
+  (and (<= (length prefix) (length string))
+       (string= prefix string :end2 (length prefix))))
+
 (defun user:field (field user)
   (let ((user (user::ensure user))
         (enc (encode-field field)))
     (dolist (value (ldap:attr-value user :accountfield))
-      (when (string= enc value :end2 (length enc))
+      (when (prefix-p enc value)
         (return (nth-value 1 (decode-field value)))))))
 
 (defun (setf user:field) (value field user)
@@ -303,7 +307,7 @@
     (let* ((user (user::ensure user))
            (enc (encode-field field))
            (prev (dolist (value (ldap:attr-value user :accountfield))
-                   (when (string= enc value :end2 (length enc))
+                   (when (prefix-p enc value)
                      (return value)))))
       (ldap:modify user *ldap*
                    (if prev
@@ -317,7 +321,7 @@
     (let* ((user (user::ensure user))
            (enc (encode-field field))
            (prev (dolist (value (ldap:attr-value user :accountfield))
-                   (when (string= enc value :end2 (length enc))
+                   (when (prefix-p enc value)
                      (return value)))))
       (ldap:modify user *ldap* `((ldap:delete :accountfield ,prev)))
       user)))
