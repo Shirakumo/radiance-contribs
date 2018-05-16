@@ -11,22 +11,51 @@
   (:domain "auth"))
 (in-package #:i-ldap)
 
-(defvar *ldap*)
-(defvar *lock* (bt:make-lock "LDAP lock"))
-(defvar *locked* NIL)
+(defvar *ldap* NIL)
+(defvar *pool-lock* (bt:make-lock "LDAP pool lock"))
+(defvar *pool-available-condition* (bt:make-condition-variable :name "LDAP pool condition"))
+(defvar *pool* ())
 
-;; FIXME: This is obviously inefficient since it
-;;        bottlenecks everything to a single thread
-;;        but doing it multi-threaded causes bad shit
-(defmacro with-ldap (() &body body)
-  (let ((thunk (gensym "THUNK")))
-    `(flet ((,thunk ()
-              ,@body))
-       (if *locked*
-           (,thunk)
-           (bt:with-lock-held (*lock*)
-             (let ((*locked* T))
-               (,thunk)))))))
+(defun acquire-connection ()
+  (bt:with-lock-held (*pool-lock*)
+    (loop for con = (pop *pool*)
+          until con
+          do (l:debug :radiance.ldap.connection "~a Waiting..." (bt:current-thread))
+             (bt:condition-wait *pool-available-condition* *pool-lock* :timeout 5)
+          finally (return con))))
+
+(defun release-connection (con)
+  (bt:with-lock-held (*pool-lock*)
+    (push con *pool*))
+  (bt:condition-notify *pool-available-condition*))
+
+(defun call-with-reconnection (function &optional (ldap *ldap*))
+  (loop
+     (handler-case
+         (return-from call-with-reconnection
+           (funcall function))
+       (usocket:socket-error (err)
+         (l:debug :radiance.ldap.connection err)
+         (l:warn :radiance.ldap.connection "Error during LDAP operations: ~a" err)
+         (loop (handler-case
+                   (return (ldap::possibly-reopen-and-rebind ldap))
+                 (usocket:socket-error (err)
+                   (l:severe :radiance.ldap.connection "Failed to reconnect to LDAP: ~a" err)
+                   (l:debug :radiance.ldap.connection err))))))))
+
+(defun call-with-ldap (function &optional (ldap *ldap*))
+  (if ldap
+      (call-with-reconnection function ldap)
+      (let ((*ldap* (acquire-connection)))
+        (unwind-protect
+             (call-with-reconnection function *ldap*)
+          (release-connection *ldap*)))))
+
+(defmacro with-ldap ((&optional (ldap '*ldap*)) &body body)
+  `(call-with-ldap (lambda () ,@body) ,ldap))
+
+(defmacro with-reconnection ((&optional (ldap '*ldap*)) &body body)
+  `(call-with-reconnection (lambda () ,@body) ,ldap))
 
 (define-condition auth::invalid-password (api-error)
   ()
@@ -61,13 +90,17 @@ a recovery, you can simply ignore this email.
 Note that the recovery link will expire after 24 hours and you will
 not be sent a new mail before then."
                     :account :recovery :message)
-  (setf *ldap* (ldap:new-ldap :host (config :ldap :host)
-                              :port (config :ldap :port)
-                              :sslflag (config :ldap :ssl)
-                              :base (config :ldap :base)
-                              :user (config :ldap :user)
-                              :pass (config :ldap :pass)))
-  (ldap:bind *ldap*)
+  (dotimes (i (defaulted-config 5 :ldap :connections))
+    (let ((ldap (ldap:new-ldap :host (config :ldap :host)
+                               :port (config :ldap :port)
+                               :sslflag (config :ldap :ssl)
+                               :base (config :ldap :base)
+                               :user (config :ldap :user)
+                               :pass (config :ldap :pass)
+                               :timeout 5
+                               :reuse-connection 'ldap:rebind)))
+      (ldap:bind ldap)
+      (push ldap *pool*)))
   (with-ldap ()
     (unless (ldap:search *ldap* '(= "objectClass" "radianceNextID") :size-limit 1)
       (ldap:add (ldap:new-entry (format NIL "cn=radianceNextID~@[,~a~]" (config :ldap :base))

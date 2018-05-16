@@ -17,7 +17,9 @@ The following configuration properties are available:
                                 ;    Typically "cn=admin,dc=example,dc=com".
                                 ;    Defaults to NIL.
     :ldap :pass                 ; => The password for the connecting user account.
-                                ;     Defaults to NIL.
+                                ;    Defaults to NIL.
+    :ldap :connections          ; => The number of connections to pool.
+                                ;    Defaults to 5.
     :account :object-class      ; => The structural class to use for new users.
                                 ;    Defaults to "inetOrgPerson".
     :account :registration      ; => Whether registration is allowed.
