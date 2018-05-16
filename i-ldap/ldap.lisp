@@ -68,57 +68,6 @@
   (print-unreadable-object (user stream :type T)
     (format stream "~a" (user:username user))))
 
-(define-trigger server-start ()
-  (defaulted-config "localhost" :ldap :host)
-  (defaulted-config ldap::+ldap-port-no-ssl+ :ldap :port)
-  (defaulted-config NIL :ldap :ssl)
-  (defaulted-config NIL :ldap :base)
-  (defaulted-config NIL :ldap :user)
-  (defaulted-config NIL :ldap :pass)
-  (defaulted-config "inetOrgPerson" :account :object-class)
-  (defaulted-config :closed :account :registration)
-  (defaulted-config (* 24 60 60) :account :recovery :timeout)
-  (defaulted-config "Radiance Account Recovery" :account :recovery :subject)
-  (defaulted-config "Hi, ~a.
-
-An account recovery was recently requested. If this was you, please
-use the following link to recover your account. If you did not request
-a recovery, you can simply ignore this email.
-
-    ~a
-
-Note that the recovery link will expire after 24 hours and you will
-not be sent a new mail before then."
-                    :account :recovery :message)
-  (dotimes (i (defaulted-config 5 :ldap :connections))
-    (let ((ldap (ldap:new-ldap :host (config :ldap :host)
-                               :port (config :ldap :port)
-                               :sslflag (config :ldap :ssl)
-                               :base (config :ldap :base)
-                               :user (config :ldap :user)
-                               :pass (config :ldap :pass)
-                               :timeout 5
-                               :reuse-connection 'ldap:rebind)))
-      (ldap:bind ldap)
-      (push ldap *pool*)))
-  (with-ldap ()
-    (unless (ldap:search *ldap* '(= "objectClass" "radianceNextID") :size-limit 1)
-      (ldap:add (ldap:new-entry (format NIL "cn=radianceNextID~@[,~a~]" (config :ldap :base))
-                                :attrs '(("objectClass" . "radianceNextID")
-                                         ("cn" . "radianceNextID")
-                                         ("accountID" . "0"))
-                                :infer-rdn NIL)
-                *ldap*))
-    (user::create "anonymous" :if-exists NIL))
-  ;; Set this after the anonymous user creation to ensure it does not
-  ;; get the password change permission.
-  (defaulted-config (list "auth.change-password.") :account :default-perms)
-  (trigger 'user:ready))
-
-(define-trigger server-stop ()
-  (trigger 'user:unready)
-  (ldap:unbind *ldap*))
-
 (defun auth:current (&optional default (session (session:get)))
   (let ((user (session:field session 'user)))
     (if user
@@ -408,3 +357,55 @@ not be sent a new mail before then."
 
 (defun user:add-default-permissions (&rest branches)
   (setf (user::default-perms) (append branches (user::default-perms))))
+
+
+(define-trigger server-start ()
+  (defaulted-config "localhost" :ldap :host)
+  (defaulted-config ldap::+ldap-port-no-ssl+ :ldap :port)
+  (defaulted-config NIL :ldap :ssl)
+  (defaulted-config NIL :ldap :base)
+  (defaulted-config NIL :ldap :user)
+  (defaulted-config NIL :ldap :pass)
+  (defaulted-config "inetOrgPerson" :account :object-class)
+  (defaulted-config :closed :account :registration)
+  (defaulted-config (* 24 60 60) :account :recovery :timeout)
+  (defaulted-config "Radiance Account Recovery" :account :recovery :subject)
+  (defaulted-config "Hi, ~a.
+
+An account recovery was recently requested. If this was you, please
+use the following link to recover your account. If you did not request
+a recovery, you can simply ignore this email.
+
+    ~a
+
+Note that the recovery link will expire after 24 hours and you will
+not be sent a new mail before then."
+                    :account :recovery :message)
+  (dotimes (i (defaulted-config 5 :ldap :connections))
+    (let ((ldap (ldap:new-ldap :host (config :ldap :host)
+                               :port (config :ldap :port)
+                               :sslflag (config :ldap :ssl)
+                               :base (config :ldap :base)
+                               :user (config :ldap :user)
+                               :pass (config :ldap :pass)
+                               :timeout 5
+                               :reuse-connection 'ldap:rebind)))
+      (ldap:bind ldap)
+      (push ldap *pool*)))
+  (with-ldap ()
+    (unless (ldap:search *ldap* '(= "objectClass" "radianceNextID") :size-limit 1)
+      (ldap:add (ldap:new-entry (format NIL "cn=radianceNextID~@[,~a~]" (config :ldap :base))
+                                :attrs '(("objectClass" . "radianceNextID")
+                                         ("cn" . "radianceNextID")
+                                         ("accountID" . "0"))
+                                :infer-rdn NIL)
+                *ldap*))
+    (user::create "anonymous" :if-exists NIL))
+  ;; Set this after the anonymous user creation to ensure it does not
+  ;; get the password change permission.
+  (defaulted-config (list "auth.change-password.") :account :default-perms)
+  (trigger 'user:ready))
+
+(define-trigger server-stop ()
+  (trigger 'user:unready)
+  (ldap:unbind *ldap*))
