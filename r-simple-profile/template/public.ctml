@@ -29,8 +29,8 @@
       Running TyNETv5 Radiance
     </footer>
     <div id="profile-custom" style="display:none;">
-      <span id="color" lquery="(text (user:field :simple-profile-color user))" />
-      <span id="background" lquery="(text (user:field :simple-profile-background user))" />
+      <span id="color" lquery='(text (user:field "simple-profile-color" user))' />
+      <span id="background" lquery='(text (user:field "simple-profile-background" user))' />
     </div>
     <script src="https://code.jquery.com/jquery-1.11.0.min.js"></script>
     <script @src="/static/simple-profile/profile.js"></script>

@@ -8,9 +8,9 @@
     <label>Username</label>
     <input type="text" placeholder="Username" lquery="(val (user:username user))" readonly /><br />
     <label>Displayname</label>
-    <input type="text" name="displayname" placeholder="Mr. Fancy" lquery="(val (user:field :displayname user))" maxlength="32" /><br />
+    <input type="text" name="displayname" placeholder="Mr. Fancy" lquery='(val (user:field "displayname" user))' maxlength="32" /><br />
     <label>E-Mail</label>
-    <input type="email" name="email" placeholder="email@example.com" lquery="(val (user:field :email user))" required /><br />
+    <input type="email" name="email" placeholder="email@example.com" lquery='(val (user:field "email" user))' required /><br />
     <c:splice iterate="fields">
       <span>
         <label lquery="(text name)"></label>
