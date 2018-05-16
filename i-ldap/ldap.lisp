@@ -233,7 +233,9 @@
                                                 `((:accountpermission ,@(user::default-perms)))))
                                    :infer-rdn NIL)))
         (ldap:add entry *ldap*)
-        (change-class entry 'user)))))
+        (let ((user (change-class entry 'user)))
+          (trigger 'user:create user)
+          user)))))
 
 (defun user:get (username &key (if-does-not-exist NIL))
   (with-ldap ()
@@ -251,6 +253,7 @@
   (with-ldap ()
     (let ((user (user::ensure user)))
       (ldap:delete user *ldap*)
+      (trigger 'user:remove user)
       NIL)))
 
 (defun user:username (user)
