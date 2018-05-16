@@ -25,9 +25,12 @@
   (with-connection
     (postmodern:list-tables T)))
 
+(defun %table-exists-p (table)
+  (postmodern:query (format NIL "select 1 from INFORMATION_SCHEMA.COLUMNS where TABLE_NAME = '~a'" table)))
+
 (defun db:collection-exists-p (collection)
   (with-connection
-      (postmodern:table-exists-p (ensure-collection-name collection))))
+    (%table-exists-p (ensure-collection-name collection))))
 
 (defun db:create (collection structure &key indices (if-exists :ignore))
   (flet ((err (msg) (error 'db:invalid-collection :database *current-db* :collection collection :message msg)))
@@ -36,7 +39,7 @@
            (query (format NIL "CREATE TABLE \"~a\" (\"_id\" INTEGER PRIMARY KEY DEFAULT nextval('\"~:*~a/ID-SEQ\"'), ~{~a~^, ~});"
                           collection (mapcar #'compile-field structure))))
       (with-connection
-        (when (postmodern:table-exists-p collection)
+        (when (%table-exists-p collection)
           (ecase if-exists
             (:ignore (return-from db:create NIL))
             (:error (error 'db:collection-already-exists :database *current-db* :collection collection))))
