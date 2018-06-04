@@ -213,7 +213,7 @@
         (push (change-class entry 'user) users)))
     users))
 
-(defun user::create (username &key (if-exists :error))
+(defun user::create (username &key (if-exists :error) (email . ""))
   (with-ldap ()
     (let ((user (user:get username)))
       (when user
@@ -227,6 +227,7 @@
                                                           "radianceAccount")
                                             (:cn . ,username)
                                             (:sn . ,username)
+                                            (:mail . ,email)
                                             (:accountid . ,(princ-to-string (get-next-id)))
                                             (:accountname . ,username)
                                             ,@(when (user::default-perms)
@@ -289,32 +290,42 @@
 
 (defun user:fields (user)
   (let ((user (user::ensure user)))
-    (mapcar #'decode-field (ldap:attr-value user :accountfield))))
+    (list* (first (ldap:attr-value user :mail))
+           (mapcar #'decode-field (ldap:attr-value user :accountfield)))))
 
 (defun prefix-p (prefix string)
   (and (<= (length prefix) (length string))
        (string= prefix string :end2 (length prefix))))
 
 (defun user:field (field user)
-  (let ((user (user::ensure user))
-        (enc (encode-field field)))
-    (dolist (value (ldap:attr-value user :accountfield))
-      (when (prefix-p enc value)
-        (return (nth-value 1 (decode-field value)))))))
+  (let ((user (user::ensure user)))
+    (cond ((string-equal field "email")
+           (ldap:attr-value user :mail))
+          (T
+           (let ((enc (encode-field field)))
+             (dolist (value (ldap:attr-value user :accountfield))
+               (when (prefix-p enc value)
+                 (return (nth-value 1 (decode-field value))))))))))
 
 (defun (setf user:field) (value field user)
   (with-ldap ()
-    (let* ((user (user::ensure user))
-           (enc (encode-field field))
-           (prev (dolist (value (ldap:attr-value user :accountfield))
-                   (when (prefix-p enc value)
-                     (return value)))))
-      (ldap:modify user *ldap*
-                   (if prev
-                       `((ldap:delete :accountfield ,prev)
-                         (ldap:add :accountfield ,(encode-field field value)))
-                       `((ldap:add :accountfield ,(encode-field field value)))))
-      value)))
+    (cond ((string-equal field "email")
+           (let ((user (user::ensure user)))
+             (ldap:modify user *ldap*
+                          `((ldap:delete :mail ,(first (ldap:attr-value user :mail)))
+                            (ldap:add :mail ,value)))))
+          (T
+           (let* ((user (user::ensure user))
+                  (enc (encode-field field))
+                  (prev (dolist (value (ldap:attr-value user :accountfield))
+                          (when (prefix-p enc value)
+                            (return value)))))
+             (ldap:modify user *ldap*
+                          (if prev
+                              `((ldap:delete :accountfield ,prev)
+                                (ldap:add :accountfield ,(encode-field field value)))
+                              `((ldap:add :accountfield ,(encode-field field value))))))))
+    value))
 
 (defun user:remove-field (field user)
   (with-ldap ()

@@ -10,6 +10,7 @@
              (format out "objectClass: radianceAccount~%")
              (format out "cn: ~a~%" name)
              (format out "sn: ~a~%" name)
+             (format out "mail: ~a~%" (gethash fields "email"))
              (format out "accountID: ~a~%" id)
              (format out "accountName: ~a~%" name)
              (loop for field being the hash-keys of fields
