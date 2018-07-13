@@ -199,7 +199,7 @@
 (defun user::ensure (thing)
   (etypecase thing
     (user:user thing)
-    (string (user:get thing :if-does-not-exist :error))))
+    (T (user:get thing :if-does-not-exist :error))))
 
 (defun user:= (a b)
   (string= (user:username a)
@@ -244,7 +244,7 @@
                               (string `(and (= objectclass "radianceAccount")
                                             (= accountname ,username/id)))
                               (integer `(and (= objectclass "radianceAccount")
-                                             (= accountid ,username/id))))
+                                             (= accountid ,(princ-to-string username/id)))))
                      :size-limit 1)
         (change-class (ldap:next-search-result *ldap*) 'user)
         (ecase if-does-not-exist
@@ -264,7 +264,7 @@
 
 (defun user:id (user)
   (let ((user (user::ensure user)))
-    (first (ldap:attr-value user :accountid))))
+    (parse-integer (first (ldap:attr-value user :accountid)))))
 
 (defun user:username (user)
   (let ((user (user::ensure user)))
