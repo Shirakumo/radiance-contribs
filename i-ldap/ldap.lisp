@@ -238,15 +238,20 @@
           (trigger 'user:create user)
           user)))))
 
-(defun user:get (username &key (if-does-not-exist NIL))
+(defun user:get (username/id &key (if-does-not-exist NIL))
   (with-ldap ()
-    (if (ldap:search *ldap* `(and (= objectclass "radianceAccount")
-                                  (= accountname ,username))
+    (if (ldap:search *ldap* (etypecase username/id
+                              (string `(and (= objectclass "radianceAccount")
+                                            (= accountname ,username/id)))
+                              (integer `(and (= objectclass "radianceAccount")
+                                             (= accountid ,username/id))))
                      :size-limit 1)
         (change-class (ldap:next-search-result *ldap*) 'user)
         (ecase if-does-not-exist
-          (:create (user::create username))
-          (:error (error 'user:not-found :name username))
+          (:create (etypecase username/id
+                     (string (user::create username/id))
+                     (integer (error "Cannot create an inexistent user from a user ID."))))
+          (:error (error 'user:not-found :name username/id))
           (:anonymous (user:get "anonymous"))
           ((NIL :NIL))))))
 
@@ -257,13 +262,13 @@
       (trigger 'user:remove user)
       NIL)))
 
+(defun user:id (user)
+  (let ((user (user::ensure user)))
+    (first (ldap:attr-value user :accountid))))
+
 (defun user:username (user)
   (let ((user (user::ensure user)))
     (first (ldap:attr-value user :accountname))))
-
-(defun user::id (user)
-  (let ((user (user::ensure user)))
-    (first (ldap:attr-value user :accountid))))
 
 (defun encode-field (field &optional value)
   (with-output-to-string (out)

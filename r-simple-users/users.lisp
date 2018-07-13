@@ -23,8 +23,10 @@
   (print-unreadable-object (user stream)
     (format stream "USER ~a" (username user))))
 
-(defmethod initialize-instance :after ((user user) &key username)
+(defmethod initialize-instance :after ((user user) &key username id)
   (setf (gethash username *user-cache*) user)
+  (setf (gethash id *user-cache*) user)
+  ;; FIXME: Not sure if this is actually correct behaviour. Probably not.
   (unless (string= "anonymous" username)
     (apply #'user:grant user *default-permissions*)))
 
@@ -41,11 +43,15 @@
   (loop for user being the hash-values of *user-cache*
         collect user))
 
-(defun user:get (username &key (if-does-not-exist NIL))
-  (let ((username (string-downcase username)))
+(defun user:get (username/id &key (if-does-not-exist NIL))
+  (let ((username (etypecase username/id
+                    (string (string-downcase username))
+                    (integer username/id))))
     (or (gethash username *user-cache*)
         (ecase if-does-not-exist
-          (:create (user::create username))
+          (:create (etypecase username
+                     (string (user::create username))
+                     (integer (error "Cannot create an inexistent user from a user ID."))))
           (:error (error 'user:not-found :name username))
           (:anonymous (user:get "anonymous"))
           ((NIL :NIL))))))
@@ -60,6 +66,14 @@
 
 (defun user:username (user)
   (username (ensure-user user)))
+
+(defun user:id (user)
+  (let ((id (id (ensure-user user))))
+    (etypecase id
+      (integer id)
+      (string
+       ;; KLUDGE: We assume a DB would not use anything but Alphanumerics for the ID.
+       (parse-integer id :radix 36)))))
 
 (defun user:fields (user)
   (let ((fields (fields (ensure-user user))))
