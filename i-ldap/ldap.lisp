@@ -213,7 +213,7 @@
         (push (change-class entry 'user) users)))
     users))
 
-(defun user::create (username &key (if-exists :error) (email . ""))
+(defun user::create (username &key (if-exists :error) (email ""))
   (with-ldap ()
     (let ((user (user:get username)))
       (when user
