@@ -21,7 +21,7 @@
 (defun normalize (user)
   (etypecase user
     (user:user user)
-    (null (user:get :anonymous))
+    (null (user:get "anonymous"))
     ((or string symbol) (user:get user :if-does-not-exist :error))))
 
 (defun profile:avatar (user size)
@@ -122,4 +122,4 @@
 
 (define-resource-locator profile page (user &optional tab)
   (make-uri :domains (list "user")
-            :path (format NIL "~(~a~@[/~a~]~)" (user:username user) tab)))
+            :path (format NIL "~(~a~@[/~a~]~)" (user:username (or user "anonymous")) tab)))
