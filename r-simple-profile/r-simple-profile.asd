@@ -17,6 +17,7 @@
                (:file "admin")
                (:file "panels"))
   :depends-on ((:interface :user)
+               :r-data-model
                :crypto-shortcuts
                :r-clip
                :ratify))
