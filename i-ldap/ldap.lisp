@@ -263,12 +263,16 @@
       NIL)))
 
 (defun user:id (user)
-  (let ((user (user::ensure user)))
-    (parse-integer (first (ldap:attr-value user :accountid)))))
+  (etypecase user
+    (user:user (parse-integer (first (ldap:attr-value user :accountid))))
+    (string    (user:id (user::ensure user)))
+    (integer   user)))
 
 (defun user:username (user)
-  (let ((user (user::ensure user)))
-    (first (ldap:attr-value user :accountname))))
+  (etypecase user
+    (user:user (first (ldap:attr-value user :accountname)))
+    (string    user)
+    (integer   (user:username (user::ensure user)))))
 
 (defun encode-field (field &optional value)
   (with-output-to-string (out)
