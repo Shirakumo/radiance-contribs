@@ -198,30 +198,45 @@
                                           order))))))
       list)))
 
-(defun db:iterate (collection query function &key fields (skip 0) amount sort accumulate)
-  (flet ((row-processor (row)
-           (funcall function
-                    (let ((table (make-hash-table :test 'equalp)))
-                      (if fields
-                          (dolist (field fields)
-                            (setf (gethash (subseq (string field) 1) table)
-                                  (getf row (ensure-field field))))
-                          (loop for (field val) on row by #'cddr
-                                do (setf (gethash (subseq (string field) 1) table) val)))
-                      table))))
-    (let ((data (loop for i from 0
-                      for row in (sort-by-specs (lambdalite:select (ensure-collection collection) query) sort)
-                      while (or (not amount)
-                                (< i (+ skip amount)))
-                      when (<= skip i)
-                      collect row)))
-      (if accumulate
-          (mapcar #'row-processor data)
-          (map NIL #'row-processor data)))))
+(defun db:iterate (collection query function &key fields (skip 0) amount sort unique accumulate)
+  (let* ((found-rows (make-hash-table :test 'equalp))
+         (count 0)
+         (end (if amount (+ skip amount) most-positive-fixnum))
+         (results (cons NIL NIL))
+         (head results))
+    (dolist (row (sort-by-specs (lambdalite:select (ensure-collection collection) query) sort))
+      (flet ((process (table)
+               (incf count)
+               (cond ((<= count skip))
+                     ((<= count end)
+                      (cond (accumulate
+                             (setf results
+                                   (setf (cdr results) (list (funcall function table)))))
+                            (T
+                             (funcall function table))))
+                     (T
+                      (return)))))
+        (let ((table (make-hash-table :test 'equalp)))
+          (if fields
+              (dolist (field fields)
+                (setf (gethash (string field) table) (getf row (ensure-field field))))
+              (loop for (field val) on row by #'cddr
+                    do (setf (gethash (subseq (string field) 1) table) val)))
+          (cond ((or (not unique) (not fields))
+                 (process table))
+                ((not (gethash table found-rows))
+                 (setf (gethash table found-rows) T)
+                 (process table))))))
+    (cdr head)))
 
-(defun db:select (collection query &key fields (skip 0) amount sort)
+(defun db:select (collection query &key fields (skip 0) amount sort unique)
   (db:iterate collection query #'identity
-              :fields fields :skip skip :amount amount :sort sort :accumulate T))
+              :fields fields
+              :skip skip
+              :amount amount
+              :sort sort
+              :unique unique
+              :accumulate T))
 
 (defun db:count (collection query)
   (length (db:select collection query :fields '(:_id))))

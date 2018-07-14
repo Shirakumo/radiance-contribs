@@ -126,14 +126,21 @@
                               do (setf (gethash (cl-postgres:field-name field) table) (cl-postgres:next-field field))) table)
           do (funcall function table))))
 
-(defun db:iterate (collection query function &key fields skip amount sort accumulate)
+(defun db:iterate (collection query function &key fields skip amount sort accumulate unique)
   (with-collection-existing (collection)
-    (with-query ((make-query (format NIL "SELECT ~:[*~;~:*~{\"~a\"~^ ~}~] FROM \"~a\"" (mapcar #'string-downcase fields) collection)
+    (with-query ((make-query (format NIL "SELECT~:[~; DISTINCT~] ~:[*~;~:*~{\"~a\"~^ ~}~] FROM \"~a\""
+                                     unique (mapcar #'string-downcase fields) collection)
                              query skip amount sort) query vars)
       (exec-query query vars (if accumulate (collecting-iterator function) (dropping-iterator function))))))
 
-(defun db:select (collection query &key fields skip amount sort)
-  (db:iterate collection query #'identity :fields fields :skip skip :amount amount :sort sort :accumulate T))
+(defun db:select (collection query &key fields skip amount sort unique)
+  (db:iterate collection query #'identity
+              :fields fields
+              :skip skip
+              :amount amount
+              :sort sort
+              :unique unique
+              :accumulate T))
 
 (defun db:count (collection query)
   (with-collection-existing (collection)
