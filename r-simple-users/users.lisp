@@ -65,15 +65,22 @@
     user))
 
 (defun user:username (user)
-  (username (ensure-user user)))
+  (etypecase user
+    (integer (user:username (user:get user)))
+    (string user)
+    (user:user (username user))))
 
 (defun user:id (user)
-  (let ((id (id (ensure-user user))))
-    (etypecase id
-      (integer id)
-      (string
-       ;; KLUDGE: We assume a DB would not use anything but Alphanumerics for the ID.
-       (parse-integer id :radix 36)))))
+  (etypecase user
+    (integer user)
+    (string (user:id (user:get user)))
+    (user:user
+     (let ((id (id user)))
+       (etypecase id
+         (integer id)
+         (string
+          ;; KLUDGE: We assume a DB would not use anything but Alphanumerics for the ID.
+          (parse-integer id :radix 36)))))))
 
 (defun user:fields (user)
   (let ((fields (fields (ensure-user user))))
