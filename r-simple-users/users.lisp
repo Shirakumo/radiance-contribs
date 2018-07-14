@@ -45,7 +45,7 @@
 
 (defun user:get (username/id &key (if-does-not-exist NIL))
   (let ((username (etypecase username/id
-                    (string (string-downcase username))
+                    (string (string-downcase username/id))
                     (integer username/id))))
     (or (gethash username *user-cache*)
         (ecase if-does-not-exist
@@ -193,7 +193,7 @@
         (l:debug :users "Set field ~a of ~a to ~s" field (gethash uid idtable) value)
         (setf (gethash field (fields (gethash uid idtable))) value)))
     ;; ensure anonymous user
-    (user:get :anonymous :if-does-not-exist :create)
+    (user:get "anonymous" :if-does-not-exist :create)
     (l:info :users "Synchronized ~d users from database." (hash-table-count idtable))))
 
 (define-trigger db:connected ()
