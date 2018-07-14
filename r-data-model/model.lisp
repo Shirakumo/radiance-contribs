@@ -43,9 +43,9 @@
       `(setf (gethash (load-time-value (string-downcase ,field)) (field-table ,data-model)) ,value)
       whole))
 
-(defun get (collection query &key (skip 0) amount sort)
+(defun get (collection query &key (skip 0) amount sort unique)
   (db:iterate collection query #'(lambda (ta) (make-instance 'data-model :collection collection :field-table ta :inserted T))
-              :skip skip :amount amount :sort sort :accumulate T))
+              :skip skip :amount amount :sort sort :unique unique :accumulate T))
 
 (defun get-one (collection query &key (skip 0) sort)
   (db:iterate collection query #'(lambda (ta) (return-from get-one
