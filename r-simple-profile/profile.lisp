@@ -22,7 +22,7 @@
   (etypecase user
     (user:user user)
     (null (user:get "anonymous"))
-    ((or string symbol) (user:get user :if-does-not-exist :error))))
+    ((or string symbol integer) (user:get user :if-does-not-exist :error))))
 
 (defun profile:avatar (user size)
   (let ((email (or (user:field "email" (normalize user)) "")))

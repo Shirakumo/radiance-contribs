@@ -33,7 +33,7 @@
 (defun ensure-user (thing)
   (etypecase thing
     (user:user thing)
-    (string (user:get thing :if-does-not-exist :error))))
+    ((or string integer) (user:get thing :if-does-not-exist :error))))
 
 (defun user:= (a b)
   (eql (ensure-user a)
