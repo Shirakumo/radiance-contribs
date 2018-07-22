@@ -315,7 +315,7 @@
        (case (first form)
          (:= `(equal ,(compile-query (second form))
                      ,(compile-query (third form))))
-         (:!= (compile-query `(:not (:= ,@(cdr form)))))
+         ((:/= :!=) (compile-query `(:not (:= ,@(cdr form)))))
          (:> (gencomparator '> 'string>))
          (:< (gencomparator '< 'string<))
          (:<= (gencomparator '< 'string<=))
