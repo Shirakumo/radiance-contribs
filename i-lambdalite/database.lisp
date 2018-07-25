@@ -318,7 +318,7 @@
          ((:/= :!=) (compile-query `(:not (:= ,@(cdr form)))))
          (:> (gencomparator '> 'string>))
          (:< (gencomparator '< 'string<))
-         (:<= (gencomparator '< 'string<=))
+         (:<= (gencomparator '<= 'string<=))
          (:>= (gencomparator '>= 'string>=))
          (:MATCHES `(cl-ppcre:scan ,(compile-query (third form))
                                    ,(compile-query (second form))))
