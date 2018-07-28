@@ -15,8 +15,7 @@
   (:method ((o list))
     (mapcar #'serialize o))
   (:method ((o vector))
-    (loop for i from 0 below (length o)
-          collect (serialize (aref o i))))
+    (map 'vector #'serialize o))
   (:method ((o hash-table))
     (loop with n = (make-hash-table :test (hash-table-test o))
           for k being the hash-keys of o
