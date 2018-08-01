@@ -11,9 +11,11 @@
   :maintainer "Nicolas Hafner <shinmera@tymoon.eu>"
   :version "1.0.0"
   :description "oAuth 1.0a provider for Radiance."
-  :components ((:file "oauth"))
+  :module-name #:oauth
+  :components ((:file "oauth")
+               (:file "admin"))
   :depends-on ((:interface :database)
                (:interface :user)
                (:interface :auth)
                (:interface :session)
-               :north))
+               :north-core))

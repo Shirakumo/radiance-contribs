@@ -5,19 +5,20 @@
 |#
 
 (in-package #:modularize-user)
-(define-module #:r-oauth
+(define-module #:oauth
   (:use #:cl #:radiance)
   (:export
    #:server
    #:application
    #:session
    #:*server*))
-(in-package #:r-oauth)
+(in-package #:oauth)
 
 (define-trigger db:connected ()
   (db:create 'applications '((key (:varchar 36))
                              (secret (:varchar 36))
-                             (name (:varchar 32)))
+                             (name (:varchar 32))
+                             (description :text))
              :indices '(key name))
   (db:create 'sessions '((key (:varchar 36))
                          (token (:varchar 36))
@@ -32,7 +33,7 @@
   ())
 
 (defclass application (north:application)
-  ())
+  ((description :initarg :description :accessor description)))
 
 (defclass session (north:session)
   ((user :initarg :user :accessor user))
@@ -40,11 +41,13 @@
 
 (defvar *server* (make-instance 'server))
 
-(defmethod north:make-application ((server server) &key name)
-  (let ((application (make-instance 'application :name name)))
+(defmethod north:make-application ((server server) &key name description)
+  (let ((application (make-instance 'application :name (or* name (error "NAME required."))
+                                                 :description (or description ""))))
     (db:insert 'applications `(("key" . ,(north:key application))
                                ("secret" . ,(north:secret application))
-                               ("name" . ,(north:name application))))
+                               ("name" . ,(north:name application))
+                               ("description" . ,(description application))))
     application))
 
 (defmethod north:make-session ((server server) application callback &key access user)
@@ -102,12 +105,12 @@
 (defun ->alist (&rest tables)
   (let ((alist ()))
     (dolist (table tables alist)
-      (maphash (lambda (k v) (push (cons k v) aist)) table))))
+      (maphash (lambda (k v) (push (cons k v) alist)) table))))
 
 (defun translate-request (request)
   (make-instance 'north:request
                  :http-method (http-method request)
-                 :url "" ;; FIXME: Original URL?
+                 :url (uri-to-url (uri request) :representation :external)
                  :parameters (->alist (post-data request)
                                       (get-data request))
                  :headers (->alist (headers request))))
@@ -142,19 +145,37 @@
        ("oauth_token_secret" . ,secret)
        ("oauth_callback_confirmed" . ,confirmed)))))
 
-(define-oauth-api oauth/authorize (request token &optional action)
-  (cond ((not action)
-         ;; RENDER PAGE
-         )
-        ((string= action "allow")
-         (multiple-value-bind (token verifier url) (north:oauth/authorize *server* request)
-           (if url
-               (redirect url)
-               ;; RENDER PAGE
-               )))
-        ((string= action "deny")
-         ;; RENDER PAGE
-         )))
+(define-oauth-api oauth/authorize (request oauth_token &optional action)
+  (r-clip:with-clip-processing ("authorize.ctml")
+    (let* ((session (north:session *server* oauth_token))
+           (application (when session (north:application *server* (north:key session)))))
+      (cond ((not application)
+             (r-clip:process
+              T :action :invalid
+                :name "oAuth"
+                :description ""))
+            ((not action)
+             (if (auth:current)
+                 (r-clip:process
+                  T :action :authorize
+                    :token oauth_token
+                    :name (north:name application)
+                    :description (description application))
+                 (redirect (resource :auth :page "login" "#"))))
+            ((string= action "allow")
+             (multiple-value-bind (token verifier url) (north:oauth/authorize *server* request)
+               (declare (ignore token))
+               (when url (redirect url))
+               (r-clip:process
+                T :action :granted
+                  :name (north:name application)
+                  :description (description application)
+                  :verifier verifier)))
+            ((string= action "deny")
+             (r-clip:process
+              T :action :denied
+                :name (north:name application)
+                :description (description application)))))))
 
 (define-oauth-api oauth/access-token (request)
   (multiple-value-bind (token secret) (north:oauth/access-token *server* request)

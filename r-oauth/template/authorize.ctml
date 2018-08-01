@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8"/>
+    <title><c:splice lquery="(text (string-capitalize action))"/> <c:splice lquery="(text name)"/></title>
+    <link rel="stylesheet" type="text/css" @href="/static/oauth/oauth.css"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body>
+    <article class="authorizer">
+      <header>
+        <h1><c:splice lquery="(text (string-capitalize action))"/> <c:splice lquery="(text name)"/></h1>
+        <span class="description" lquery="(text description)"></span>
+      </header>
+      <c:when test="(eql action :invalid)">
+        <div class="invalid">
+          Your request did not contain a valid oAuth token.
+        </div>
+      </c:when>
+      <c:when test="(eql action :authorize)">
+        <form class="authorize" method="post" @action="/api/oauth/authorize">
+          <input type="hidden" name="oauth_token" lquery="(val token)"/>
+          <input type="submit" name="action" value="allow" />
+          <input type="submit" name="action" value="deny" />
+        </form>
+      </c:when>
+      <c:when test="(eql action :granted)">
+        <div class="granted">
+          <p>You have granted access to this application. Please copy the following verifier and pass it to the application.</p>
+          <div class="verifier" lquery="(text verifier)"/>
+        </div>
+      </c:when>
+      <c:when test="(eql action :denied)">
+        <div class="denied">
+          <p>You have denied access to this application. You may now close this page.</p>
+        </div>
+      </c:when>
+    </article>
+  </body>
+</html>
