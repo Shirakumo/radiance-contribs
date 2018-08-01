@@ -161,8 +161,9 @@ not be sent a new mail before then."
    :msg (get-var "msg")))
 
 (define-resource-locator auth page (page &optional landing)
-  (cond ((string-equal page "login")
-         (values #@"auth/login"
+  (cond ((find page '("login" "logout" "register" "recover") :test #'string-equal)
+         (values (make-uri :domains '("auth")
+                           :path page)
                  `(("landing-page" . ,(etypecase landing
                                         (null "")
                                         (string
