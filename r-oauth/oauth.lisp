@@ -161,12 +161,12 @@
   (setf *prune-thread* (lambda ()
                          (unwind-protect
                               (with-simple-restart (abort-prune "Abort the prune thread")
-                                (loop while *prune-thread*
-                                      for i from 0
+                                (loop with start = (get-universal-time)
+                                      while *prune-thread*
                                       do (sleep 1)
-                                         (when (<= (* 60 60) i)
-                                           (prune-sessions)
-                                           (setf i 0))))
+                                         (when (<= (+ start (* 60 60)) (get-universal-time))
+                                           (setf start (get-universal-time))
+                                           (prune-sessions))))
                            (l:debug :radiance.oauth.prune "Exiting prune thread."))))
   (l:info :oauth.prune "Prune thread started."))
 
