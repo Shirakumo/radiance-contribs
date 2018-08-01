@@ -11,7 +11,9 @@
    #:server
    #:application
    #:session
-   #:*server*
+   #:make-application
+   #:application
+   #:revoke-application
    #:prune-sessions
    #:start-prune-thread
    #:stop-prune-thread))
@@ -80,8 +82,8 @@
                                ("author" . ,(user:id (author application)))))
     application))
 
-(defmethod north:make-session ((server server) application callback &key access user expiry)
-  (let ((session (make-instance 'session :key application
+(defmethod north:make-session ((server server) (application application) callback &key access user expiry)
+  (let ((session (make-instance 'session :key (north:key application)
                                          :callback callback
                                          :access access
                                          :user NIL
@@ -129,15 +131,24 @@
                :amount 1)
     session))
 
-(defmethod north:revoke-application ((server server) application-key)
+(defmethod north:revoke-application ((server server) (application application))
   (db:with-transaction ()
-    (l:info :oauth.application "Revoking ~s" (north:application server application-key))
-    (db:remove 'sessions (db:query (:= 'key application-key)))
-    (db:remove 'applications (db:query (:= 'key application-key)))))
+    (l:info :oauth.application "Revoking ~s" application)
+    (db:remove 'sessions (db:query (:= 'key (north:key application))))
+    (db:remove 'applications (db:query (:= 'key (north:key application))))))
 
 ;; FIXME
 (defmethod north:record-nonce ((server server) timestamp nonce))
 (defmethod north:find-nonce ((server server) timestamp nonce))
+
+(defun make-application (name &key description author)
+  (north:make-application *server* :name name :description description :author author))
+
+(defun application (key)
+  (north:application *server* key))
+
+(defun revoke-application (application)
+  (north:revoke-application *server* application))
 
 (defun prune-sessions ()
   (l:info :oauth.prune "Pruning expired sessions.")
@@ -316,3 +327,13 @@
       (redirect (uri-to-url #@"admin/oauth/authorizations" :query '(("info" . "Application revoked."))
                                                            :representation :external))
       (api-output NIL)))
+
+(define-implement-trigger admin
+  (admin:define-panel oauth applications (:access (perm oauth application) :clip "application.ctml" :icon "fa-rocket")
+    (r-clip:process
+     T :applications (dm:get 'applications (db:query (:= 'author (user:id (auth:current)))))))
+
+  (admin:define-panel oauth authorizations (:access (perm oauth authorize) :clip "authorizations.ctml" :icon "fa-key")
+    (r-clip:process
+     T :applications (loop for data in (db:select 'sessions (db:query (:= 'user (user:id (auth:current)))) :fields '(key))
+                           collect (dm:get-one 'applications (db:query (:= 'key (gethash "key" data))))))))

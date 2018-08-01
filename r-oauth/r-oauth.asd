@@ -13,11 +13,12 @@
   :description "oAuth 1.0a provider for Radiance."
   :module-name #:oauth
   :components ((:file "oauth")
-               (:file "admin"))
+               (:file "documentation"))
   :depends-on ((:interface :database)
                (:interface :user)
                (:interface :auth)
                (:interface :session)
                :north-core
                :r-data-model
-               :bordeaux-threads))
+               :bordeaux-threads
+               :documentation-utils))
