@@ -77,8 +77,8 @@
         (and default (user:get default :if-does-not-exist :error)))))
 
 (defun auth:associate (user &optional (session (session:get)))
-  (l:info :auth "Associating ~a with ~a and prolonging for ~a"
-          session user auth:*login-timeout*)
+  (l:debug :auth "Associating ~a with ~a and prolonging for ~a"
+           session user auth:*login-timeout*)
   (setf (session:field session 'user) (user:username user))
   (incf (session:timeout session)
         (case auth:*login-timeout*

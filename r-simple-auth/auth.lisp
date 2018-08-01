@@ -38,8 +38,8 @@ not be sent a new mail before then."
   (let ((user (etypecase user
                 (user:user user)
                 ((or string integer) (user:get user)))))
-    (l:info :auth "Associating ~a with ~a and prolonging for ~a"
-            session user auth:*login-timeout*)
+    (l:debug :auth "Associating ~a with ~a and prolonging for ~a"
+             session user auth:*login-timeout*)
     (setf (session:field session 'user) user)
     (incf (session:timeout session)
           (case auth:*login-timeout*
