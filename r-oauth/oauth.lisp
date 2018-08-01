@@ -137,7 +137,7 @@
 
 (defun prune-sessions ()
   (l:info :radiance.oauth.prune "Pruning expired sessions.")
-  (db:delete 'sessions (db:query (:< 'expiry (get-universal-time)))))
+  (db:remove 'sessions (db:query (:< 'expiry (get-universal-time)))))
 
 (defun start-prune-thread ()
   (when (and *prune-thread* (bt:thread-alive-p *prune-thread*))
@@ -145,7 +145,7 @@
   (setf *prune-thread* T)
   (setf *prune-thread* (lambda ()
                          (unwind-protect
-                              (with-simple-restart (abort-loop)
+                              (with-simple-restart (abort-prune "Abort the prune thread")
                                 (loop while *prune-thread*
                                       for i from 0
                                       do (sleep 1)
@@ -164,13 +164,14 @@
             do (sleep 0.001)
             finally (when (bt:thread-alive-p thread)
                       (bt:interrupt-thread thread (lambda ()
-                                                    (invoke-restart 'abort-loop)))))
+                                                    (invoke-restart 'abort-prune)))))
       (l:info :radiance.oauth.prune "Prune thread stopped."))))
 
 (define-trigger auth:no-associated-user (session)
-  (when (header "Authentication")
-    (let ((session (north:oauth/verify)))
-      (auth:associate (user:get (user session)) session))))
+  (when (header "Authorization")
+    (let ((oauth-session (north:oauth/verify *server* (translate-request *request*))))
+      (auth:associate (user:get (user oauth-session)) session)
+      (session:end session))))
 
 (defun ->alist (&rest tables)
   (let ((alist ()))
@@ -263,10 +264,11 @@
        ("oauth_token_secret" . ,secret)))))
 
 (define-oauth-api oauth/verify (request)
-  (north:oauth/verify *server* request)
-  (setf (content-type *response*) "text/plain")
-  (north:alist->oauth-response
-   `(("oauth_verified" . "true"))))
+  (let ((session (north:oauth/verify *server* request)))
+    (setf (content-type *response*) "text/plain")
+    (north:alist->oauth-response
+     `(("oauth_verified" . "true")
+       ("oauth_user" . ,(user:username (user session)))))))
 
 (define-api oauth/application (&optional name key) (:access (perm oauth application))
   (unless (or name key)
