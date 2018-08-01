@@ -72,6 +72,7 @@
                                                  :description (or description "")
                                                  :author (or author (auth:current)
                                                              (error "AUTHOR required.")))))
+    (l:info :oauth.application "Creating ~s" application)
     (db:insert 'applications `(("key" . ,(north:key application))
                                ("secret" . ,(north:secret application))
                                ("name" . ,(north:name application))
@@ -87,6 +88,7 @@
                                          :expiry (or expiry
                                                      (+ (get-universal-time)
                                                         (config :lifetime :unauth))))))
+    (l:debug :oauth.session "Creating ~s" session)
     (db:insert 'sessions `(("key" . ,(north:key session))
                            ("token" . ,(north:token session))
                            ("secret" . ,(north:token-secret session))
@@ -118,6 +120,7 @@
 
 (defmethod north:rehash-session ((server server) (session session))
   (let ((old-token (north:token session)))
+    (l:debug :oauth.session "Rehashing ~s" session)
     (setf (north:token session) (north:make-nonce))
     (setf (north:token-secret session) (north:make-nonce))
     (db:update 'sessions (db:query (:= 'token old-token))
@@ -128,6 +131,7 @@
 
 (defmethod north:revoke-application ((server server) application-key)
   (db:with-transaction ()
+    (l:info :oauth.application "Revoking ~s" (north:application server application-key))
     (db:remove 'sessions (db:query (:= 'key application-key)))
     (db:remove 'applications (db:query (:= 'key application-key)))))
 
@@ -136,7 +140,7 @@
 (defmethod north:find-nonce ((server server) timestamp nonce))
 
 (defun prune-sessions ()
-  (l:info :radiance.oauth.prune "Pruning expired sessions.")
+  (l:info :oauth.prune "Pruning expired sessions.")
   (db:remove 'sessions (db:query (:< 'expiry (get-universal-time)))))
 
 (defun start-prune-thread ()
@@ -153,7 +157,7 @@
                                            (prune-sessions)
                                            (setf i 0))))
                            (l:debug :radiance.oauth.prune "Exiting prune thread."))))
-  (l:info :radiance.oauth.prune "Prune thread started."))
+  (l:info :oauth.prune "Prune thread started."))
 
 (defun stop-prune-thread ()
   (when (and *prune-thread* (bt:thread-alive-p *prune-thread*))
