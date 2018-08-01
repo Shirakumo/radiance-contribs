@@ -14,12 +14,19 @@
    #:*server*))
 (in-package #:oauth)
 
+(define-trigger radiance:startup ()
+  (defaulted-config (list (perm oauth authorize)
+                          (perm oauth application))
+                    :permissions :default)
+  (apply #'user:add-default-permissions (config :permissions :default)))
+
 (define-trigger db:connected ()
   (db:create 'applications '((key (:varchar 36))
                              (secret (:varchar 36))
                              (name (:varchar 32))
-                             (description :text))
-             :indices '(key name))
+                             (description :text)
+                             (author :integer))
+             :indices '(key author))
   (db:create 'sessions '((key (:varchar 36))
                          (token (:varchar 36))
                          (secret (:varchar 36))
@@ -33,7 +40,8 @@
   ())
 
 (defclass application (north:application)
-  ((description :initarg :description :accessor description)))
+  ((description :initarg :description :accessor description)
+   (author :initarg :author :accessor author)))
 
 (defclass session (north:session)
   ((user :initarg :user :accessor user))
@@ -41,19 +49,23 @@
 
 (defvar *server* (make-instance 'server))
 
-(defmethod north:make-application ((server server) &key name description)
+(defmethod north:make-application ((server server) &key name description author)
   (let ((application (make-instance 'application :name (or* name (error "NAME required."))
-                                                 :description (or description ""))))
+                                                 :description (or description "")
+                                                 :author (or author (auth:current)
+                                                             (error "AUTHOR required.")))))
     (db:insert 'applications `(("key" . ,(north:key application))
                                ("secret" . ,(north:secret application))
                                ("name" . ,(north:name application))
-                               ("description" . ,(description application))))
+                               ("description" . ,(description application))
+                               ("author" . ,(user:id (author application)))))
     application))
 
 (defmethod north:make-session ((server server) application callback &key access user)
   (let ((session (make-instance 'session :callback callback
                                          :access access
-                                         :user user)))
+                                         :user (or user (auth:current)
+                                                   (error "USER required.")))))
     (db:insert 'applications `(("key" . ,(north:key session))
                                ("token" . ,(north:token session))
                                ("secret" . ,(north:token-secret session))
@@ -132,7 +144,7 @@
                            :message (princ-to-string e)))))
 
 (defmacro define-oauth-api (endpoint (request &rest args) &body body)
-  `(define-api ,endpoint ,args ()
+  `(define-api ,endpoint ,args (:access (perm oauth authorize))
      (call-with-oauth-handling
       (lambda (,request)
         ,@body))))
@@ -158,9 +170,9 @@
              (if (auth:current)
                  (r-clip:process
                   T :action :authorize
-                    :token oauth_token
                     :name (north:name application)
-                    :description (description application))
+                    :description (description application)
+                    :token oauth_token)
                  (redirect (resource :auth :page "login" "#"))))
             ((string= action "allow")
              (multiple-value-bind (token verifier url) (north:oauth/authorize *server* request)
@@ -189,3 +201,46 @@
   (setf (content-type *response*) "text/plain")
   (north:alist->oauth-response
    `(("oauth_verified" . "true"))))
+
+(define-api oauth/application (&optional name key) (:access (perm oauth application))
+  (unless (or name key)
+    (error 'api-error :message "Either NAME or KEY must be given."))
+  (let ((application (cond (name (db:select 'applications (db:query (:= 'name name)) :amount 1))
+                           (key  (db:select 'applications (db:query (:= 'key key)) :amount 1)))))
+    (if application
+        (api-output (first application))
+        (api-output NIL :status 404 :message "No such application found."))))
+
+(define-api oauth/application/list/owned () (:access (perm oauth application))
+  (api-output (db:select 'applications (db:query (:= 'author (user:id (auth:current)))))))
+
+(define-api oauth/application/list/authorized () (:access (perm oauth application))
+  (api-output (dolist (key (db:select 'sessions (db:query (:= 'user (user:id (auth:current)))) :fields '(key)))
+                (let ((table (make-hash-table :test 'equal))
+                      (application (north:application *server* key)))
+                  (setf (gethash "key" table) key)
+                  (setf (gethash "name" table) (north:name application))
+                  (setf (gethash "description" table) (description application))
+                  table))))
+
+(define-api oauth/application/register (name &optional description) (:access (perm oauth application))
+  (let ((application (north:make-application *server* :name name
+                                                      :description description)))
+    (if (string= (post/get "browser") "true")
+        (redirect (uri-to-url #@"admin/oauth/applications" :query '(("info" . "Application registered."))
+                                                           :representation :external))
+        (api-output (first (db:select 'applications (db:query (:= 'key (north:key application))) :amount 1))))))
+
+(define-api oauth/application/delete (key) (:access (perm oauth authorize))
+  (north:revoke-application *server* key)
+  (if (string= (post/get "browser") "true")
+      (redirect (uri-to-url #@"admin/oauth/applications" :query '(("info" . "Application deleted."))
+                                                         :representation :external))
+      (api-output NIL)))
+
+(define-api oauth/application/revoke (key) (:access (perm oauth authorize))
+  (db:remove 'sessions (db:query (:= 'key key)))
+  (if (string= (post/get "browser") "true")
+      (redirect (uri-to-url #@"admin/oauth/authorizations" :query '(("info" . "Application revoked."))
+                                                           :representation :external))
+      (api-output NIL)))

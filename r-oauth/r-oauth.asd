@@ -18,4 +18,5 @@
                (:interface :user)
                (:interface :auth)
                (:interface :session)
-               :north-core))
+               :north-core
+               :r-data-model))
