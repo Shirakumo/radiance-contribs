@@ -11,14 +11,27 @@
    #:server
    #:application
    #:session
-   #:*server*))
+   #:*server*
+   #:prune-sessions
+   #:start-prune-thread
+   #:stop-prune-thread))
 (in-package #:oauth)
+
+(defvar *prune-thread* NIL)
 
 (define-trigger radiance:startup ()
   (defaulted-config (list (perm oauth authorize)
                           (perm oauth application))
                     :permissions :default)
-  (apply #'user:add-default-permissions (config :permissions :default)))
+  (defaulted-config (* 60 60)
+                    :lifetime :unauth)
+  (defaulted-config (* 60 60 24 365 1)
+                    :lifetime :auth)
+  (apply #'user:add-default-permissions (config :permissions :default))
+  (start-prune-thread))
+
+(define-trigger radiance:shutdown ()
+  (stop-prune-thread))
 
 (define-trigger db:connected ()
   (db:create 'applications '((key (:varchar 36))
@@ -33,7 +46,8 @@
                          (verifier (:varchar 36))
                          (callback :text)
                          (access (:varchar 16))
-                         (user :integer))
+                         (user :integer)
+                         (expiry (:integer 5)))
              :indices '(key token)))
 
 (defclass server (north:server)
@@ -44,8 +58,12 @@
    (author :initarg :author :accessor author)))
 
 (defclass session (north:session)
-  ((user :initarg :user :accessor user))
-  (:default-initargs :user (error "USER required.")))
+  ((user :initarg :user :accessor user)
+   (expiry :initarg :expiry :accessor expiry))
+  (:default-initargs
+   :user (error "USER required.")
+   :expiry (+ (get-universal-time)
+              (config :lifetime :unauth))))
 
 (defvar *server* (make-instance 'server))
 
@@ -61,18 +79,22 @@
                                ("author" . ,(user:id (author application)))))
     application))
 
-(defmethod north:make-session ((server server) application callback &key access user)
+(defmethod north:make-session ((server server) application callback &key access user expiry)
   (let ((session (make-instance 'session :key application
                                          :callback callback
                                          :access access
-                                         :user NIL)))
+                                         :user NIL
+                                         :expiry (or expiry
+                                                     (+ (get-universal-time)
+                                                        (config :lifetime :unauth))))))
     (db:insert 'sessions `(("key" . ,(north:key session))
                            ("token" . ,(north:token session))
                            ("secret" . ,(north:token-secret session))
                            ("verifier" . ,(north:verifier session))
                            ("callback" . ,(north:callback session))
                            ("access" . ,(north:access session))
-                           ("user" . ,(when user (user:id user)))))
+                           ("user" . ,(when user (user:id user)))
+                           ("expiry" . ,(expiry session))))
     session))
 
 (defmethod north:application ((server server) application-key)
@@ -113,8 +135,42 @@
 (defmethod north:record-nonce ((server server) timestamp nonce))
 (defmethod north:find-nonce ((server server) timestamp nonce))
 
-;; FIXME: Inject into auth/session.
-;; FIXME: Prune incomplete sessions.
+(defun prune-sessions ()
+  (l:info :radiance.oauth.prune "Pruning expired sessions.")
+  (db:delete 'sessions (db:query (:< 'expiry (get-universal-time)))))
+
+(defun start-prune-thread ()
+  (when (and *prune-thread* (bt:thread-alive-p *prune-thread*))
+    (error "Prune thread is already active."))
+  (setf *prune-thread* T)
+  (setf *prune-thread* (lambda ()
+                         (unwind-protect
+                              (with-simple-restart (abort-loop)
+                                (loop while *prune-thread*
+                                      for i from 0
+                                      do (sleep 1)
+                                         (when (<= (* 60 60) i)
+                                           (prune-sessions)
+                                           (setf i 0))))
+                           (l:debug :radiance.oauth.prune "Exiting prune thread."))))
+  (l:info :radiance.oauth.prune "Prune thread started."))
+
+(defun stop-prune-thread ()
+  (when (and *prune-thread* (bt:thread-alive-p *prune-thread*))
+    (let ((thread *prune-thread*))
+      (setf *prune-thread* NIL)
+      (loop repeat 100
+            while (bt:thread-alive-p thread)
+            do (sleep 0.001)
+            finally (when (bt:thread-alive-p thread)
+                      (bt:interrupt-thread thread (lambda ()
+                                                    (invoke-restart 'abort-loop)))))
+      (l:info :radiance.oauth.prune "Prune thread stopped."))))
+
+(define-trigger auth:no-associated-user (session)
+  (when (header "Authentication")
+    (let ((session (north:oauth/verify)))
+      (auth:associate (user:get (user session)) session))))
 
 (defun ->alist (&rest tables)
   (let ((alist ()))
@@ -184,7 +240,9 @@
             ((string= action "allow")
              (multiple-value-bind (token verifier url) (north:oauth/authorize *server* request)
                (db:update 'sessions (db:query (:= 'token token))
-                          `(("user" . ,(user:id (auth:current)))) :amount 1)
+                          `(("user" . ,(user:id (auth:current)))
+                            ("expiry" . ,(+ (get-universal-time)
+                                            (config :lifetime :auth)))) :amount 1)
                (when url (redirect url))
                (r-clip:process
                 T :action :granted

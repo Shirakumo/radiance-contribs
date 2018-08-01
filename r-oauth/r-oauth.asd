@@ -19,4 +19,5 @@
                (:interface :auth)
                (:interface :session)
                :north-core
-               :r-data-model))
+               :r-data-model
+               :bordeaux-threads))
