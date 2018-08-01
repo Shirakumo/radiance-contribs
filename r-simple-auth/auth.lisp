@@ -30,18 +30,23 @@ not be sent a new mail before then."
 
 (defun auth:current (&optional default (session (session:get)))
   (or (session:field session 'user)
+      (prog1 NIL (trigger 'auth:no-associated-user session))
+      (session:field session 'user)
       (and default (user:get default :if-does-not-exist :error))))
 
 (defun auth:associate (user &optional (session (session:get)))
-  (l:info :auth "Associating ~a with ~a and prolonging for ~a"
-          session user auth:*login-timeout*)
-  (setf (session:field session 'user) user)
-  (incf (session:timeout session)
-        (case auth:*login-timeout*
-          ((NIL) 0)
-          ((T) (* 60 60 24 365 100))
-          (otherwise auth:*login-timeout*)))
-  (trigger 'auth:associate session))
+  (let ((user (etypecase user
+                (user:user user)
+                ((or string integer) (user:get user)))))
+    (l:info :auth "Associating ~a with ~a and prolonging for ~a"
+            session user auth:*login-timeout*)
+    (setf (session:field session 'user) user)
+    (incf (session:timeout session)
+          (case auth:*login-timeout*
+            ((NIL) 0)
+            ((T) (* 60 60 24 365 100))
+            (otherwise auth:*login-timeout*)))
+    (trigger 'auth:associate session)))
 
 (defun auth::set-password (user password)
   (setf (user:field "simple-auth-hash" user)

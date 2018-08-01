@@ -69,7 +69,9 @@
     (format stream "~a" (user:username user))))
 
 (defun auth:current (&optional default (session (session:get)))
-  (let ((user (session:field session 'user)))
+  (let ((user (or (session:field session 'user)
+                  (prog1 NIL (trigger 'auth:no-associated-user session))
+                  (session:field session 'user))))
     (if user
         (user:get user)
         (and default (user:get default :if-does-not-exist :error)))))
