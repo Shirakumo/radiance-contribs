@@ -62,17 +62,17 @@
     application))
 
 (defmethod north:make-session ((server server) application callback &key access user)
-  (let ((session (make-instance 'session :callback callback
+  (let ((session (make-instance 'session :key application
+                                         :callback callback
                                          :access access
-                                         :user (or user (auth:current)
-                                                   (error "USER required.")))))
-    (db:insert 'applications `(("key" . ,(north:key session))
-                               ("token" . ,(north:token session))
-                               ("secret" . ,(north:token-secret session))
-                               ("verifier" . ,(north:verifier session))
-                               ("callback" . ,(north:callback session))
-                               ("access" . ,(north:access session))
-                               ("user" . ,(user:id user))))
+                                         :user NIL)))
+    (db:insert 'sessions `(("key" . ,(north:key session))
+                           ("token" . ,(north:token session))
+                           ("secret" . ,(north:token-secret session))
+                           ("verifier" . ,(north:verifier session))
+                           ("callback" . ,(north:callback session))
+                           ("access" . ,(north:access session))
+                           ("user" . ,(when user (user:id user)))))
     session))
 
 (defmethod north:application ((server server) application-key)
@@ -80,7 +80,8 @@
     (when data
       (make-instance 'application :key (gethash "key" data)
                                   :secret (gethash "secret" data)
-                                  :name (gethash "name" data)))))
+                                  :name (gethash "name" data)
+                                  :description (gethash "description" data)))))
 
 (defmethod north:session ((server server) token)
   (let ((data (first (db:select 'sessions (db:query (:= 'token token)) :amount 1))))
@@ -113,6 +114,7 @@
 (defmethod north:find-nonce ((server server) timestamp nonce))
 
 ;; FIXME: Inject into auth/session.
+;; FIXME: Prune incomplete sessions.
 
 (defun ->alist (&rest tables)
   (let ((alist ()))
@@ -144,7 +146,7 @@
                            :message (princ-to-string e)))))
 
 (defmacro define-oauth-api (endpoint (request &rest args) &body body)
-  `(define-api ,endpoint ,args (:access (perm oauth authorize))
+  `(define-api ,endpoint ,args ()
      (call-with-oauth-handling
       (lambda (,request)
         ,@body))))
@@ -155,7 +157,7 @@
     (north:alist->oauth-response
      `(("oauth_token" . ,token)
        ("oauth_token_secret" . ,secret)
-       ("oauth_callback_confirmed" . ,confirmed)))))
+       ("oauth_callback_confirmed" . ,(if confirmed "true" "false"))))))
 
 (define-oauth-api oauth/authorize (request oauth_token &optional action)
   (r-clip:with-clip-processing ("authorize.ctml")
@@ -167,16 +169,22 @@
                 :name "oAuth"
                 :description ""))
             ((not action)
-             (if (auth:current)
-                 (r-clip:process
-                  T :action :authorize
-                    :name (north:name application)
-                    :description (description application)
-                    :token oauth_token)
-                 (redirect (resource :auth :page "login" "#"))))
+             (cond ((not (auth:current))
+                    (redirect (resource :auth :page "login" (uri-to-url #@"oauth/api/oauth/authorize"
+                                                                        :query `(("oauth_token" . ,oauth_token))
+                                                                        :representation :external))))
+                   ((user:check (auth:current) (perm oauth authorize))
+                    (r-clip:process
+                     T :action :authorize
+                       :name (north:name application)
+                       :description (description application)
+                       :token oauth_token))
+                   (T
+                    (error 'request-denied :message "You are not permitted to perform oauth logins."))))
             ((string= action "allow")
              (multiple-value-bind (token verifier url) (north:oauth/authorize *server* request)
-               (declare (ignore token))
+               (db:update 'sessions (db:query (:= 'token token))
+                          `(("user" . ,(user:id (auth:current)))) :amount 1)
                (when url (redirect url))
                (r-clip:process
                 T :action :granted

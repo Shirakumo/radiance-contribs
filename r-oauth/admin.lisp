@@ -13,5 +13,5 @@
 
   (admin:define-panel oauth authorizations (:access (perm oauth authorize) :clip "authorizations.ctml" :icon "fa-key")
     (r-clip:process
-     T :applications (loop for key in (db:select 'sessions (db:query (:= 'user (user:id (auth:current)))) :fields '(key))
-                           collect (dm:get-one 'applications (db:query (:= 'key key)))))))
+     T :applications (loop for data in (db:select 'sessions (db:query (:= 'user (user:id (auth:current)))) :fields '(key))
+                           collect (dm:get-one 'applications (db:query (:= 'key (gethash "key" data))))))))
