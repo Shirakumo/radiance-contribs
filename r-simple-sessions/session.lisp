@@ -52,9 +52,9 @@
   (etypecase session
     (session:session session)
     (string (gethash session *session-table*))
-    (null (or (when (boundp '*request*)
-                (gethash 'session (data *request*)))
-              (session:start)))))
+    (null (when (boundp '*request*)
+            (or (gethash 'session (data *request*))
+                (session:start))))))
 
 (defun session:= (a b)
   (eql (ensure-session a)

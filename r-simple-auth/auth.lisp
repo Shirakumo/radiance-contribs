@@ -29,10 +29,12 @@ not be sent a new mail before then."
   (defaulted-config "open" :registration))
 
 (defun auth:current (&optional default (session (session:get)))
-  (or (session:field session 'user)
-      (prog1 NIL (trigger 'auth:no-associated-user session))
-      (session:field session 'user)
-      (and default (user:get default :if-does-not-exist :error))))
+  (or (when session
+        (or (session:field session 'user)
+            (trigger 'auth:no-associated-user session)
+            (session:field session 'user)))
+      (when default
+        (user:get default :if-does-not-exist :error))))
 
 (defun auth:associate (user &optional (session (session:get)))
   (let ((user (etypecase user
