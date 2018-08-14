@@ -115,7 +115,10 @@
     (loop while (cl-postgres:next-row)
           for table = (let ((table (make-hash-table :test 'equalp)))
                         (loop for field across fields
-                              do (setf (gethash (cl-postgres:field-name field) table) (cl-postgres:next-field field))) table)
+                              for name = (cl-postgres:field-name field)
+                              for value = (cl-postgres:next-field field)
+                              do (setf (gethash name table) (unless (eql value :null) value)))
+                        table)
           collect (funcall function table))))
 
 (defun dropping-iterator (function)
@@ -123,7 +126,10 @@
     (loop while (cl-postgres:next-row)
           for table = (let ((table (make-hash-table :test 'equalp)))
                         (loop for field across fields
-                              do (setf (gethash (cl-postgres:field-name field) table) (cl-postgres:next-field field))) table)
+                              for name = (cl-postgres:field-name field)
+                              for value = (cl-postgres:next-field field)
+                              do (setf (gethash name table) (unless (eql value :null) value)))
+                        table)
           do (funcall function table))))
 
 (defun db:iterate (collection query function &key fields skip amount sort accumulate unique)
@@ -155,7 +161,7 @@
                    `(loop ,@iters 
                           for i from 1
                           collect (string-downcase field) into fields
-                          collect value into values
+                          collect (or value :null) into values
                           collect i into nums
                           finally (return (car (exec-query (format NIL query fields nums) values
                                                            (collecting-iterator #'(lambda (ta) (gethash "_id" ta)))))))))
@@ -185,7 +191,7 @@
       (macrolet ((looper (&rest iters)
                    `(loop ,@iters
                           for i from (1+ (length vars))
-                          collect value into values
+                          collect (or value :null) into values
                           collect (cons (string-downcase field) i) into fields
                           finally (exec-query (format NIL "~a );" (format NIL query fields)) (append vars values)))))
         (etypecase data
