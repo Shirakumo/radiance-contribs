@@ -442,4 +442,5 @@ not be sent a new mail before then."
 
 (define-trigger server-stop ()
   (trigger 'user:unready)
-  (ldap:unbind *ldap*))
+  (loop for ldap = (pop *pool*)
+        while ldap do (ldap:unbind ldap)))
