@@ -311,7 +311,7 @@
 (defun user:field (field user)
   (let ((user (user::ensure user)))
     (cond ((string-equal field "email")
-           (ldap:attr-value user :mail))
+           (first (ldap:attr-value user :mail)))
           (T
            (let ((enc (encode-field field)))
              (dolist (value (ldap:attr-value user :accountfield))
