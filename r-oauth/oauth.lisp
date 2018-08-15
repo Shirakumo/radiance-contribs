@@ -128,7 +128,7 @@
                            ("secret" . ,(north:token-secret session))
                            ("verifier" . ,(north:verifier session))
                            ("callback" . ,(north:callback session))
-                           ("access" . ,(north:access session))
+                           ("access" . ,(string (north:access session)))
                            ("user" . ,(when user (user:id user)))
                            ("expiry" . ,(expiry session))))
     session))
@@ -149,7 +149,7 @@
                               :verifier (gethash "verifier" data)
                               :callback (gethash "callback" data)
                               :key (gethash "key" data)
-                              :access (gethash "access" data)
+                              :access (find-symbol (gethash "access" data) :keyword)
                               :user (gethash "user" data)))))
 
 (defmethod north:rehash-session ((server server) (session session))
