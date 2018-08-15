@@ -21,6 +21,38 @@
 
 (defvar *prune-thread* NIL)
 
+(defun prune-sessions ()
+  (l:info :oauth.prune "Pruning expired sessions.")
+  (db:remove 'sessions (db:query (:< 'expiry (get-universal-time)))))
+
+(defun start-prune-thread ()
+  (when (and *prune-thread* (bt:thread-alive-p *prune-thread*))
+    (error "Prune thread is already active."))
+  (setf *prune-thread* T)
+  (setf *prune-thread* (lambda ()
+                         (unwind-protect
+                              (with-simple-restart (abort-prune "Abort the prune thread")
+                                (loop with start = (get-universal-time)
+                                      while *prune-thread*
+                                      do (sleep 1)
+                                         (when (<= (+ start (* 60 60)) (get-universal-time))
+                                           (setf start (get-universal-time))
+                                           (prune-sessions))))
+                           (l:debug :radiance.oauth.prune "Exiting prune thread."))))
+  (l:info :oauth.prune "Prune thread started."))
+
+(defun stop-prune-thread ()
+  (when (and *prune-thread* (bt:thread-alive-p *prune-thread*))
+    (let ((thread *prune-thread*))
+      (setf *prune-thread* NIL)
+      (loop repeat 100
+            while (bt:thread-alive-p thread)
+            do (sleep 0.001)
+            finally (when (bt:thread-alive-p thread)
+                      (bt:interrupt-thread thread (lambda ()
+                                                    (invoke-restart 'abort-prune)))))
+      (l:info :radiance.oauth.prune "Prune thread stopped."))))
+
 (define-trigger radiance:startup ()
   (defaulted-config (list (perm oauth authorize)
                           (perm oauth application))
@@ -150,38 +182,6 @@
 (defun revoke-application (application)
   (north:revoke-application *server* application))
 
-(defun prune-sessions ()
-  (l:info :oauth.prune "Pruning expired sessions.")
-  (db:remove 'sessions (db:query (:< 'expiry (get-universal-time)))))
-
-(defun start-prune-thread ()
-  (when (and *prune-thread* (bt:thread-alive-p *prune-thread*))
-    (error "Prune thread is already active."))
-  (setf *prune-thread* T)
-  (setf *prune-thread* (lambda ()
-                         (unwind-protect
-                              (with-simple-restart (abort-prune "Abort the prune thread")
-                                (loop with start = (get-universal-time)
-                                      while *prune-thread*
-                                      do (sleep 1)
-                                         (when (<= (+ start (* 60 60)) (get-universal-time))
-                                           (setf start (get-universal-time))
-                                           (prune-sessions))))
-                           (l:debug :radiance.oauth.prune "Exiting prune thread."))))
-  (l:info :oauth.prune "Prune thread started."))
-
-(defun stop-prune-thread ()
-  (when (and *prune-thread* (bt:thread-alive-p *prune-thread*))
-    (let ((thread *prune-thread*))
-      (setf *prune-thread* NIL)
-      (loop repeat 100
-            while (bt:thread-alive-p thread)
-            do (sleep 0.001)
-            finally (when (bt:thread-alive-p thread)
-                      (bt:interrupt-thread thread (lambda ()
-                                                    (invoke-restart 'abort-prune)))))
-      (l:info :radiance.oauth.prune "Prune thread stopped."))))
-
 (define-trigger auth:no-associated-user (session)
   (when (header "Authorization")
     (let ((oauth-session (north:oauth/verify *server* (translate-request *request*))))
@@ -205,17 +205,19 @@
   (handler-case (funcall function (translate-request *request*))
     (north:parameter-error (e)
       (setf (return-code *response*) 400)
-      (radiance:api-output :status 400
-                           :message (princ-to-string e)))
+      (api-output NIL
+                  :status 400
+                  :message (princ-to-string e)))
     (north:parameters-missing (e)
       (setf (return-code *response*) 400)
-      (radiance:api-output :status 400
-                           :message (princ-to-string e)
-                           :data (north:parameters e)))
+      (api-output (north:parameters e)
+                  :status 400
+                  :message (princ-to-string e)))
     (north:verification-error (e)
       (setf (return-code *response*) 401)
-      (radiance:api-output :status 401
-                           :message (princ-to-string e)))))
+      (api-output NIL
+                  :status 401
+                  :message (princ-to-string e)))))
 
 (defmacro define-oauth-api (endpoint (request &rest args) &body body)
   `(define-api ,endpoint ,args ()
