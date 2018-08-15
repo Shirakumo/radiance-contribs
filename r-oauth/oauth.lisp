@@ -197,8 +197,13 @@
   (make-instance 'north:request
                  :http-method (http-method request)
                  :url (uri-to-url (uri request) :representation :external)
-                 :parameters (->alist (post-data request)
-                                      (get-data request))
+                 :parameters (unless (search "multipart/form-data" (header "Content-Type" request))
+                               (append (->alist (get-data request))
+                                       (loop for k being the hash-keys of (post-data request)
+                                             for v being the hash-values of (post-data request)
+                                             append (if (string= "[]" k :start2 (- (length k) 2))
+                                                        (loop for value in v collect (cons k v))
+                                                        (list (cons k v))))))
                  :headers (->alist (headers request))))
 
 (defun call-with-oauth-handling (function)
