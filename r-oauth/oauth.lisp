@@ -29,16 +29,17 @@
   (when (and *prune-thread* (bt:thread-alive-p *prune-thread*))
     (error "Prune thread is already active."))
   (setf *prune-thread* T)
-  (setf *prune-thread* (lambda ()
-                         (unwind-protect
-                              (with-simple-restart (abort-prune "Abort the prune thread")
-                                (loop with start = (get-universal-time)
-                                      while *prune-thread*
-                                      do (sleep 1)
-                                         (when (<= (+ start (* 60 60)) (get-universal-time))
-                                           (setf start (get-universal-time))
-                                           (prune-sessions))))
-                           (l:debug :radiance.oauth.prune "Exiting prune thread."))))
+  (flet ((prune-thread ()
+           (unwind-protect
+                (with-simple-restart (abort-prune "Abort the prune thread")
+                  (loop with start = (get-universal-time)
+                        while *prune-thread*
+                        do (sleep 1)
+                           (when (<= (+ start (* 60 60)) (get-universal-time))
+                             (setf start (get-universal-time))
+                             (prune-sessions))))
+             (l:debug :radiance.oauth.prune "Exiting prune thread."))))
+    (setf *prune-thread* (bt:make-thread #'prune-thread :name "oAuth Prune Thread")))
   (l:info :oauth.prune "Prune thread started."))
 
 (defun stop-prune-thread ()
