@@ -196,7 +196,9 @@
 
 (defun (setf user::default-perms) (value)
   (setf (config :account :default-perms)
-        (mapcar #'encode-branch value)))
+        (remove-duplicates
+         (mapcar #'encode-branch value)
+         :test #'string=)))
 
 (defun user::ensure (thing)
   (etypecase thing
@@ -350,7 +352,7 @@
 
 (defun encode-branch (branch)
   (etypecase branch
-    (string (format NIL "~a." branch))
+    (string (format NIL "~a~@[.~]" branch (char/= #\. (char branch (1- (length branch))))))
     (list (with-output-to-string (out)
             (dolist (item branch)
               (write-string (string-downcase item) out)
