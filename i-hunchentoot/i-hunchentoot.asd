@@ -10,7 +10,9 @@
   :class "radiance:virtual-module"
   :author "Nicolas Hafner <shinmera@tymoon.eu>"
   :maintainer "Nicolas Hafner <shinmera@tymoon.eu>"
-  :version "1.0.1"
+  :version "1.1.0"
   :description "Bridging library to enable Hunchentoot as a Radiance interface."
   :components ((:file "i-hunchentoot"))
-  :depends-on (:hunchentoot :cl-ppcre))
+  :depends-on (:hunchentoot
+               :cl-ppcre
+               :ironclad))

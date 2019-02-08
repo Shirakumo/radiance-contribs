@@ -6,11 +6,34 @@
 
 (in-package #:modularize-user)
 (define-module i-hunchentoot
-    (:use #:cl #:radiance)
-    (:implements #:server))
+  (:use #:cl #:radiance)
+  (:implements #:server))
 (in-package #:i-hunchentoot)
 
 (defvar *listeners* (make-hash-table :test 'eql))
+
+(defclass prng-safe-taskmaster (hunchentoot:one-thread-per-connection-taskmaster)
+  ())
+
+(defmethod hunchentoot:start-thread ((taskmaster prng-safe-taskmaster) thunk &key name)
+  (flet ((thunk ()
+           (let ((ironclad:*prng* (ironclad:make-prng :os)))
+             (funcall thunk))))
+    (bt:make-thread #'thunk :name name)))
+
+(defclass radiance-acceptor (hunchentoot:acceptor)
+  ()
+  (:default-initargs
+   :access-log-destination NIL
+   :message-log-destination NIL
+   :taskmaster (make-instance 'prng-safe-taskmaster)))
+
+(defmethod hunchentoot:acceptor-dispatch-request ((acceptor radiance-acceptor) request)
+  (multiple-value-bind (response request) (handle-hunchentoot-request request)
+    (handle-radiance-response response request)))
+
+(defclass radiance-ssl-acceptor (radiance-acceptor hunchentoot:ssl-acceptor)
+  ())
 
 (define-trigger server-start ()
   (defaulted-config `(:default) :enabled)
@@ -21,18 +44,19 @@
 (define-trigger server-stop ()
   (mapcar #'server:stop (server:listeners)))
 
-(defun mklist (port address ssl-cert ssl-key ssl-pass)
-  (let ((args `(:port ,port :address ,address
-                :access-log-destination NIL
-                :message-log-destination NIL)))
-    (if (and ssl-cert ssl-key)
-        (apply #'make-instance 'hunchentoot:ssl-acceptor
-               :ssl-certificate-file ssl-cert :ssl-privatekey-file ssl-key :ssl-privatekey-password ssl-pass args)
-        (apply #'make-instance 'hunchentoot:easy-acceptor args))))
+(defun make-listener (port address ssl-cert ssl-key ssl-pass)
+  (if (and ssl-cert ssl-key)
+      (make-instance 'radiance-ssl-acceptor
+                     :port port :address address
+                     :ssl-certificate-file ssl-cert
+                     :ssl-privatekey-file ssl-key
+                     :ssl-privatekey-password ssl-pass)
+      (make-instance 'radiance-acceptor 
+                     :port port :address address)))
 
 (defun server:start (name &key port address ssl-cert ssl-key ssl-pass)
   (check-type name keyword)
-  (let ((listener (mklist port address ssl-cert ssl-key ssl-pass)))
+  (let ((listener (make-listener port address ssl-cert ssl-key ssl-pass)))
     (l:info :server "Starting listener ~a" name)
     (setf (gethash name *listeners*) listener)
     (hunchentoot:start listener)
@@ -70,7 +94,7 @@
                  (write-char char out)
                  (format out "%~2,'0x" (char-code char))))))
 
-(defun post-handler (response request)
+(defun handle-radiance-response (response request)
   (declare (optimize (speed 3)))
   (let ((*request* request)
         (*response* response))
@@ -81,9 +105,11 @@
           ;; Process attributes
           (setf (hunchentoot:return-code*) (return-code response)
                 (hunchentoot:content-type*) (content-type response))
-          (maphash #'(lambda (key val) (declare (ignore key)) (set-real-cookie val)) (cookies response))
-          (maphash #'(lambda (key val) (setf (hunchentoot:header-out (header-encode key))
-                                             (header-encode val))) (headers response))
+          (maphash (lambda (key val) (declare (ignore key)) (set-real-cookie val))
+                   (cookies response))
+          (maphash (lambda (key val) (setf (hunchentoot:header-out (header-encode key))
+                                           (header-encode val)))
+                   (headers response))
           (unless (data response)
             (error 'request-empty :request request)))
       (set-data (data)
@@ -95,25 +121,20 @@
       ((array (unsigned-byte 8)) (data response))
       (null "Something really bad is going on (empty request body after error handling)"))))
 
-(defun pre-handler (request)
+(defun handle-hunchentoot-request (request)
   (declare (optimize (speed 3)))
   (let* ((host (the string (hunchentoot:host request)))
          (colon (position #\: host)))
     #+sbcl (setf (sb-thread:thread-name (bt:current-thread)) host)
-    #'(lambda () (post-handler (request (make-uri
-                                         :domains (nreverse (cl-ppcre:split "\\." (string-downcase host :end colon)
-                                                                            :end (or colon (length host))))
-                                         :port (when colon (parse-integer host :start (1+ colon)))
-                                         ;; Cut off starting slash.
-                                         :path (subseq (the string
-                                                            (hunchentoot:script-name request))
-                                                       1))
-                                        :http-method (hunchentoot:request-method request)
-                                        :headers (hunchentoot:headers-in request)
-                                        :post (hunchentoot:post-parameters request)
-                                        :get (hunchentoot:get-parameters request)
-                                        :cookies (hunchentoot:cookies-in request)
-                                        :remote (hunchentoot:remote-addr request))
-                               request))))
-
-(setf hunchentoot:*dispatch-table* (list #'pre-handler))
+    (request (make-uri
+              :domains (nreverse (cl-ppcre:split "\\." (string-downcase host :end colon)
+                                                 :end (or colon (length host))))
+              :port (when colon (parse-integer host :start (1+ colon)))
+              ;; Cut off starting slash.
+              :path (subseq (the string (hunchentoot:script-name request)) 1))
+             :http-method (hunchentoot:request-method request)
+             :headers (hunchentoot:headers-in request)
+             :post (hunchentoot:post-parameters request)
+             :get (hunchentoot:get-parameters request)
+             :cookies (hunchentoot:cookies-in request)
+             :remote (hunchentoot:remote-addr request))))
