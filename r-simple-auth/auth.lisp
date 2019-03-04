@@ -79,7 +79,7 @@ not be sent a new mail before then."
                 (l:info :auth ,message username)
                 (cond
                   ((string= "true" (post/get "browser"))
-                   (redirect (format NIL "~a?msg=~a" (referer *request*) message))
+                   (redirect (merge-url (referer) :parameters `(("msg" . ,message))))
                    (return-from ,block ""))
                   (T (error 'api-error :message message)))))
          ,@body))))
@@ -98,7 +98,7 @@ not be sent a new mail before then."
                                                   ("code" . ,code)))))
           (err "A recovery email has already been sent."))
       (if (string= "true" (post/get "browser"))
-          (redirect (format NIL "~a?msg=~a" (referer *request*) "Recovery email sent."))
+          (redirect (merge-url (referer) :parameters `(("msg" . "Recovery email sent."))))
           (api-output "Recovery email sent.")))))
 
 (define-api simple-auth/recover (username code) ()
