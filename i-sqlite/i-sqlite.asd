@@ -10,7 +10,7 @@
   :class "radiance:virtual-module"
   :author "Nicolas Hafner <shinmera@tymoon.eu>"
   :maintainer "Nicolas Hafner <shinmera@tymoon.eu>"
-  :version "1.0.0"
+  :version "1.1.0"
   :description "A bridging library to allow using SQLite3 as a Radiance database."
   :components ((:file "module")
                (:file "load")
