@@ -16,4 +16,5 @@
   :depends-on (:woo
                :cl-ppcre
                :http-body
-               :bordeaux-threads))
+               :bordeaux-threads
+               :uiop))

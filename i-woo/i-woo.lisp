@@ -161,13 +161,18 @@
   (getf env :headers))
 
 (defun parse-cookies (env)
-  (let ((table (make-hash-table :test 'equalp)))
-    (loop for (key val) on env by #'cddr
-          when (eq key :http-cookie)
-          do (let ((pos (position #\= val)))
-               (setf (gethash (subseq val 0 pos) table)
-                     (subseq val (1+ pos)))))
-    table))
+  ;; Cookies are stored as a single key-value pair in woo headers
+  ;; and separated by commas.
+  (let* ((headers (parse-headers env))
+         (cookies-header (and headers (gethash "cookie" headers))))
+    (when cookies-header
+      (loop with cookies = (make-hash-table :test 'equalp)
+            for pair in (uiop:split-string cookies-header :separator '(#\;)) do
+              (destructuring-bind (key val)
+                  (uiop:split-string pair :separator '(#\=))
+                (setf (gethash (string-trim '(#\space) key) cookies)
+                      (string-trim '(#\space) val)))
+            finally (return cookies)))))
 
 (defun transform-response (request response)
   (list (return-code response)
