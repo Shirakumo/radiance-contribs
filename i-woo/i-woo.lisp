@@ -156,13 +156,9 @@
           (T body))))
 
 (defun parse-headers (env)
-  (let ((table (make-hash-table :test 'equalp)))
-    (loop for (key val) on env by #'cddr
-          for name = (string key)
-          when (and (< 5 (length name))
-                    (string= "HTTP-" name :end2 5))
-          do (setf (gethash name table) val))
-    table))
+  ;; woo env is a plist that already provides a hash-table with the headers,
+  ;; so no need to build our own.
+  (getf env :headers))
 
 (defun parse-cookies (env)
   (let ((table (make-hash-table :test 'equalp)))
