@@ -208,13 +208,12 @@
                 (request (make-instance 'uri :path (subseq request-uri 1 (position #\? request-uri))
                                              :port server-port
                                              :domains (nreverse (cl-ppcre:split "\\." server-name)))
-                         :remote NIL
                          :http-method request-method
                          :headers (parse-headers env)
                          :post (parse-post raw-body content-type content-length)
                          :get (parse-get query-string)
                          :cookies (parse-cookies env)
-                         :remote "unknown"))
+                         :remote (getf env :remote-addr)))
             ;; Clean up temporary files
             (handler-case
                 (flet ((handle-var (var)
