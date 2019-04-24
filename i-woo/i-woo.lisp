@@ -72,7 +72,7 @@
 
 (defun parse-get (get)
   (let ((table (make-hash-table :test 'equalp)))
-    (loop for pair in (cl-ppcre:split "&" get)
+    (loop for pair in (uiop:split-string get :separator '(#\&))
           do (let ((pos (position #\= pair)))
                (when pos
                  (let ((key (url-decode (subseq pair 0 pos)))
@@ -207,7 +207,7 @@
                                       (maybe-invoke-restart 'abort err))))
                 (request (make-instance 'uri :path (subseq request-uri 1 (position #\? request-uri))
                                              :port server-port
-                                             :domains (nreverse (cl-ppcre:split "\\." server-name)))
+                                             :domains (nreverse (uiop:split-string server-name :separator '(#\.))))
                          :http-method request-method
                          :headers (parse-headers env)
                          :post (parse-post raw-body content-type content-length)
