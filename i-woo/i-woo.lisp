@@ -133,27 +133,34 @@
      stream)))
 
 (defun parse-post (body type length)
-  (let ((body (http-body:parse type length body)))
-    (cond ((starts-with "multipart/form-data" type)
-           ;; Need to parse standard params into table,
-           ;; file arguments into (PATH ORIGINAL-FILENAME MIME-TYPE)
-           (let ((map (make-hash-table :test 'equalp)))
-             (with-simple-restart (abort "Abort processing more values.")
-               (loop for (key body meta headers) in body
-                     for content-type = (gethash "content-type" headers)
-                     for filename = (gethash "filename" meta)
-                     do (with-simple-restart (skip "Skip processing this value.")
-                          (let ((val (if content-type
-                                         ;; I don't know if this is a good idea.
-                                         (when (string/= filename "")
-                                           (list (handle-stream-to-file body) filename content-type))
-                                         (handle-stream-to-string body))))
-                            (when val
-                              (if (ends-with "[]" key)
-                                  (push val (gethash key map))
-                                  (setf (gethash key map) val)))))))
-             map))
-          (T body))))
+  (let ((map (make-hash-table :test 'equalp)))
+    (cond
+      ((starts-with "multipart/form-data" type)
+       ;; Need to parse standard params into table,
+       ;; file arguments into (PATH ORIGINAL-FILENAME MIME-TYPE)
+       (with-simple-restart (abort "Abort processing more values.")
+         (loop for (key body meta headers)
+                 in (http-body:parse type length body)
+               for content-type = (gethash "content-type" headers)
+               for filename = (gethash "filename" meta)
+               do (with-simple-restart (skip "Skip processing this value.")
+                    (let ((val (if content-type
+                                   ;; I don't know if this is a good idea.
+                                   (when (string/= filename "")
+                                     (list (handle-stream-to-file body)
+                                           filename
+                                           content-type))
+                                   (handle-stream-to-string body))))
+                      (when val
+                        (if (ends-with "[]" key)
+                            (push val (gethash key map))
+                            (setf (gethash key map) val)))))
+               finally (return map))))
+      ((starts-with "application/x-www-form-urlencoded" type)
+       (loop for (key . val) in (http-body:parse type length body)
+             do (setf (gethash key map) val)
+             finally (return map)))
+      (T map))))
 
 (defun parse-headers (env)
   ;; woo env is a plist that already provides a hash-table with the headers,
