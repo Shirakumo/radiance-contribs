@@ -144,13 +144,17 @@
                for content-type = (gethash "content-type" headers)
                for filename = (gethash "filename" meta)
                do (with-simple-restart (skip "Skip processing this value.")
-                    (let ((val (if content-type
-                                   ;; I don't know if this is a good idea.
-                                   (when (string/= filename "")
-                                     (list (handle-stream-to-file body)
-                                           filename
-                                           content-type))
-                                   (handle-stream-to-string body))))
+                    (let ((val (cond (filename
+                                      (list (handle-stream-to-file body)
+                                            filename
+                                            content-type))
+                                     ((or (null content-type)
+                                          (starts-with "text/plain" content-type))
+                                      (handle-stream-to-string body))
+                                     (T
+                                      ;; Unknown content-type on non-file. Ignore.
+                                      (warn "Unknown content-type on the non-file post field ~s." key)
+                                      NIL))))
                       (when val
                         (if (ends-with "[]" key)
                             (push val (gethash key map))
