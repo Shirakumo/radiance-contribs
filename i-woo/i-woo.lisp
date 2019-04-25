@@ -216,6 +216,7 @@
                                              :port server-port
                                              :domains (nreverse (uiop:split-string server-name :separator '(#\.))))
                          :http-method request-method
+                         :body-stream raw-body
                          :headers (parse-headers env)
                          :post (parse-post raw-body content-type content-length)
                          :get (parse-get query-string)
