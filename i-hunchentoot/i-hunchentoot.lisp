@@ -133,6 +133,8 @@
               ;; Cut off starting slash.
               :path (subseq (the string (hunchentoot:script-name request)) 1))
              :http-method (hunchentoot:request-method request)
+             :body-stream (hunchentoot:raw-post-data :request request
+                                                     :want-stream t)
              :headers (hunchentoot:headers-in request)
              :post (hunchentoot:post-parameters request)
              :get (hunchentoot:get-parameters request)
