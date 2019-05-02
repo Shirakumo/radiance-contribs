@@ -76,7 +76,7 @@
           do (let ((pos (position #\= pair)))
                (when pos
                  (let ((key (url-decode (subseq pair 0 pos)))
-                       (val (subseq pair (1+ pos))))
+                       (val (url-decode (subseq pair (1+ pos)))))
                    (if (ends-with "[]" key)
                        (push val (gethash key table))
                        (setf (gethash key table) val))))))
