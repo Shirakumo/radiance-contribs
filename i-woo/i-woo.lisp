@@ -169,7 +169,10 @@
 (defun parse-headers (env)
   ;; woo env is a plist that already provides a hash-table with the headers,
   ;; so no need to build our own.
-  (getf env :headers))
+  (let ((table (getf env :headers)))
+    (setf (gethash "content-length" table)
+          (princ-to-string (gethash "content-length" table)))
+    table))
 
 (defun parse-cookies (env)
   ;; Cookies are stored as a single key-value pair in woo headers
