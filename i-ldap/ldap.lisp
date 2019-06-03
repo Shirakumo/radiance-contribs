@@ -136,7 +136,8 @@
 (defun password-valid-p (hash password)
   (multiple-value-bind (_ salt digest) (decode-hash hash)
     (declare (ignore _))
-    (string= hash (hash-password password :salt salt :digest digest))))
+    (when (and salt digest)
+      (string= hash (hash-password password :salt salt :digest digest)))))
 
 (defun auth::set-password (user password)
   (with-ldap ()
@@ -146,9 +147,9 @@
       user)))
 
 (defun auth::check-password (user password)
-  (let ((user (user::ensure user)))
-    (unless (password-valid-p (first (ldap:attr-value user :userpassword))
-                              password)
+  (let* ((user (user::ensure user))
+         (hash (first (ldap:attr-value user :userpassword))))
+    (unless (and hash (password-valid-p hash password))
       (error 'auth::invalid-password))))
 
 (defun auth::recovery-active-p (user &optional code)
