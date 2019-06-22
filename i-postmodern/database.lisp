@@ -62,7 +62,13 @@
         (unless (valid-name-p name)
           (err "Invalid name, only a-z, - and _ are allowed."))
         (ecase type
-          ((:INTEGER :ID)
+          (:ID
+           (format NIL "\"~a\" INTEGER~@[ REFERENCES ~a(\"_id\")"
+                   (when arg (ensure-collection-name arg))))
+          (:BOOLEAN
+           (when arg (err "BOOLEAN cannot accept an argument."))
+           (format NIL "\"~a\" BOOLEAN" name))
+          (:INTEGER
            (format NIL "\"~a\" ~a" name
                    (ecase arg ((1 2) "SMALLINT") ((3 4) "INTEGER") ((5 6 7 8) "BIGINT") ((NIL) "INTEGER"))))
           (:FLOAT
@@ -82,7 +88,9 @@
     (rest 
      (mapcar (lambda (column)
                (destructuring-bind (name type size) column
-                 (list name (cond ((string= type "integer")
+                 (list name (cond ((string= type "boolean")
+                                   :BOOLEAN)
+                                  ((string= type "integer")
                                    :INTEGER)
                                   ((string= type "smallint")
                                    (list :INTEGER 2))
