@@ -80,6 +80,7 @@
 (lquery:define-lquery-function time (node time &optional (format :human))
   (let ((stamp (etypecase time
                  (local-time:timestamp time)
+                 ((eql T) (local-time:now))
                  (fixnum (local-time:universal-to-timestamp time))
                  (string (local-time:parse-timestring time)))))
     (setf (plump:attribute node "datetime")
@@ -88,6 +89,8 @@
           (format-fancy-date stamp))
     (setf (plump:children node) (plump:make-child-array))
     (plump:make-text-node node (ecase format
+                                 (:year (local-time:format-timestring NIL stamp :format '(:year)
+                                                                                :timezone local-time:+utc-zone+))
                                  (:clock (format-clock-time stamp))
                                  (:human (format-human-date stamp))
                                  (:machine (format-machine-date stamp))
