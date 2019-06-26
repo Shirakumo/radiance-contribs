@@ -36,10 +36,10 @@
 
 (defun profile:fields ()
   (loop for model in (dm:get 'fields (db:query :all))
-        collect `((:name . ,(dm:field "name" model))
-                  (:type . ,(dm:field "type" model))
-                  (:default . ,(dm:field "default" model))
-                  (:editable . ,(= 1 (dm:field "editable" model))))))
+        collect `((:name . ,(dm:field model "name"))
+                  (:type . ,(dm:field model "type"))
+                  (:default . ,(dm:field model "default"))
+                  (:editable . ,(= 1 (dm:field model "editable"))))))
 
 (defun profile:add-field (name &key (type :text) default (editable T))
   (let ((name (string-downcase name)))
