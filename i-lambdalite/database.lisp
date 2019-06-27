@@ -271,20 +271,22 @@
                    (lambda (row)
                      (maphash (lambda (key val)
                                 (setf (getf row (ensure-field key)) val))
-                              data)))
+                              data)
+                     row))
                   (list
                    (lambda (row)
                      (loop for (key . val) in data
-                           do (setf (getf row (ensure-field key)) val)))))))
+                           do (setf (getf row (ensure-field key)) val))
+                     row)))))
     (with-table-change (collection rows)
-      (prog1 (setf rows (sort-by-specs rows sort))
-        (loop for row in rows
+      (prog1 (print (setf rows (sort-by-specs rows sort)))
+        (loop for cons on rows
               for i from 0
               while (or (not amount)
                         (< i (+ skip amount)))
               when (and (<= skip i)
-                        (funcall query row))
-              do (funcall setter row))))
+                        (funcall query (car cons)))
+              do (setf (car cons) (funcall setter (car cons))))))
     NIL))
 
 (defmacro db:with-transaction (() &body body)
