@@ -279,7 +279,7 @@
                            do (setf (getf row (ensure-field key)) val))
                      row)))))
     (with-table-change (collection rows)
-      (prog1 (print (setf rows (sort-by-specs rows sort)))
+      (prog1 (setf rows (sort-by-specs rows sort))
         (loop for cons on rows
               for i from 0
               while (or (not amount)
