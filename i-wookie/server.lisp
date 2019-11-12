@@ -8,6 +8,7 @@
 (define-module #:i-wookie
   (:use #:cl #:radiance)
   (:implements #:server))
+(in-package #:i-wookie)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (setf wookie:*enabled-plugins* '(:get :post :cookie :multipart))
