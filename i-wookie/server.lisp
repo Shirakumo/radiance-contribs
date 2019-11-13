@@ -76,16 +76,15 @@
 
 (defun handle-request (wk-request wk-response)
   (let ((response (request (parse-uri (format NIL "~a~a"
-                                              (gethash "host" (headers request))
+                                              (gethash "host" (wookie:request-headers wk-request))
                                               (urlencode:urldecode
                                                (subseq (wookie:request-resource wk-request) 0
-                                                       (position #\? (wookie:request-resource wk-request)))
-                                               :lenientp T)))
+                                                       (position #\? (wookie:request-resource wk-request))))))
                            :http-method (wookie:request-method wk-request)
                            :headers (wookie:request-headers wk-request)
-                           :post (cond ((search "application/x-www-form-urlencoded" (gethash "content-type" (headers request)))
+                           :post (cond ((search "application/x-www-form-urlencoded" (gethash "content-type" (wookie:request-headers wk-request)))
                                         (wookie:plugin-request-data :post wk-request))
-                                       ((search "multipart/form-data" (gethash "content-type" (headers request)))
+                                       ((search "multipart/form-data" (gethash "content-type" (wookie:request-headers wk-request)))
                                         (merge-hash-tables (getf (wookie:plugin-request-data :multipart wk-request) :hash-file)
                                                            (getf (wookie:plugin-request-data :multipart wk-request) :hash-form))))
                            :get (wookie:plugin-request-data :get wk-request)
