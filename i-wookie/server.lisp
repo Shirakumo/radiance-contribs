@@ -109,7 +109,7 @@
            (wookie:finish-response wk-response)))
         
         ((or string (array (unsigned-byte 8)))
-         (wookie:send-response wk-response :status (return-code response) :body (data response)))
+         (wookie:send-response wk-response :status (return-code response) :body (data response) :headers (list :content-type (or (content-type response) "text/plain"))))
 
         (null (error 'request-empty :request NIL)))
       wk-response)))
