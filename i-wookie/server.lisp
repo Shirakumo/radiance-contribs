@@ -100,7 +100,7 @@
       (etypecase (data response)
         (pathname
          (let ((buffer (make-array 1024 :element-type '(unsigned-byte 8)))
-               (output-stream (wookie:start-response wk-response :status (return-code response))))
+               (output-stream (wookie:start-response wk-response :status (return-code response) :headers (list :content-type (trivial-mimes:mime (data response))))))
            (with-open-file (input-stream (data response) :element-type '(unsigned-byte 8))
              (loop for n = (read-sequence buffer input-stream)
                    while (< 0 n) do
