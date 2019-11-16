@@ -182,8 +182,9 @@
     (when cookies-header
       (loop with cookies = (make-hash-table :test 'equalp)
             for pair in (uiop:split-string cookies-header :separator '(#\;)) do
-              (destructuring-bind (key val)
-                  (uiop:split-string pair :separator '(#\=))
+              (let* ((search-eq (position #\= pair))
+                     (key (subseq pair 0 search-eq))
+                     (val (subseq pair (1+ search-eq))))
                 (setf (gethash (string-trim '(#\space) key) cookies)
                       (string-trim '(#\space) val)))
             finally (return cookies)))))
@@ -243,6 +244,6 @@
                 (v:severe :server "Error in cleanup: ~a" err)))
             ;; Present output
             (transform-response request response)))
-      (abort ()
+      (abort (err)
         :report "Abort and send back an internal error."
         (error 'internal-error :message "Oh dear.")))))
