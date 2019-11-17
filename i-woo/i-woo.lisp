@@ -189,6 +189,10 @@
                       (string-trim '(#\space) val)))
             finally (return cookies)))))
 
+(defun strip-set-cookie (full-cookie)
+  (let ((search-eq (position #\: full-cookie)))
+    (subseq full-cookie (+ search-eq 2))))
+
 (defun transform-response (request response)
   (list (return-code response)
         (let ((headers (list :content-type (content-type response))))
@@ -198,8 +202,8 @@
                    (push (intern (string-upcase header) "KEYWORD") headers))
           (loop for cookie being the hash-keys of (cookies response)
                 for value being the hash-values of (cookies response)
-                do (push (cookie-header value) headers)
-                   (push (intern (string-upcase cookie) "KEYWORD") headers))
+                do (push (strip-set-cookie (cookie-header value)) headers)
+                   (push :set-cookie headers))
           headers)
         (etypecase (data response)
           (string (list (data response)))
