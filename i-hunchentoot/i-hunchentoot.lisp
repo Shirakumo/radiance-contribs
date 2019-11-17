@@ -94,6 +94,10 @@
                  (write-char char out)
                  (format out "%~2,'0x" (char-code char))))))
 
+(defun read-unprocessed-body (stream)
+  (loop while (peek-char nil stream nil)
+       do (read-char stream)))
+
 (defun handle-radiance-response (response request)
   (declare (optimize (speed 3)))
   (let ((*request* request)
@@ -101,6 +105,8 @@
     (restart-case
         (handler-bind
             ((error #'handle-condition))
+          (when (body-stream request)
+            (read-unprocessed-body (body-stream request)))
           (l:trace :server "Post-process: ~a" response)
           ;; Process attributes
           (setf (hunchentoot:return-code*) (return-code response)
