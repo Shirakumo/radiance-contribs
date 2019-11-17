@@ -94,9 +94,17 @@
                  (write-char char out)
                  (format out "%~2,'0x" (char-code char))))))
 
-(defun read-unprocessed-body (stream)
+(defun read-buffered-discarding-the-value (stream buffer-size)
+  (let ((buffer (make-array buffer-size :element-type (stream-element-type stream))))
+    (read-sequence buffer stream :end buffer-size)))
+
+(defconstant +default-buffer-size+ 4096)
+
+(defun read-unprocessed-body (stream content-length)
   (loop while (peek-char nil stream nil)
-       do (read-char stream)))
+     for buffer-size = (min +default-buffer-size+ (- content-length processed))
+     until (eq buffer-size 0)
+     summing (read-buffered-discarding-the-value stream buffer-size) into processed))
 
 (defun handle-radiance-response (response request)
   (declare (optimize (speed 3)))
@@ -106,7 +114,7 @@
         (handler-bind
             ((error #'handle-condition))
           (when (body-stream request)
-            (read-unprocessed-body (body-stream request)))
+            (read-unprocessed-body (body-stream request) (content-length request)))
           (l:trace :server "Post-process: ~a" response)
           ;; Process attributes
           (setf (hunchentoot:return-code*) (return-code response)
