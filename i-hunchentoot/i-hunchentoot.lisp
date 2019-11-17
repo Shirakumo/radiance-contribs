@@ -98,10 +98,9 @@
 
 (defun read-unprocessed-body (stream content-length)
   (let ((buffer (make-array +default-buffer-size+ :element-type (stream-element-type stream))))
-    (loop while (peek-char nil stream nil)
-       for buffer-size = (min +default-buffer-size+ (- content-length processed))
-       until (eq buffer-size 0)
-       summing (read-sequence buffer stream :end buffer-size) into processed)))
+    (loop for read = (read-sequence buffer stream :end (min +default-buffer-size+ content-length))
+       until (= 0 read)
+       do (decf content-length read))))
 
 (defun handle-radiance-response (response request)
   (declare (optimize (speed 3)))
