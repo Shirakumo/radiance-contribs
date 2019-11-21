@@ -110,7 +110,7 @@
         (handler-bind
             ((error #'handle-condition))
           (when (body-stream request)
-            (read-unprocessed-body (body-stream request) (content-length request)))
+            (read-unprocessed-body (body-stream request) (or (content-length request) 0)))
           (l:trace :server "Post-process: ~a" response)
           ;; Process attributes
           (setf (hunchentoot:return-code*) (return-code response)
