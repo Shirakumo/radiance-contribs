@@ -17,5 +17,4 @@
                :cl-ppcre
                :bordeaux-threads
                :do-urlencode
-               :alexandria
-               :trivial-mimes))
+               :alexandria))

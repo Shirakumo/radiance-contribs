@@ -100,7 +100,7 @@
       (etypecase (data response)
         (pathname
          (let ((buffer (make-array 1024 :element-type '(unsigned-byte 8)))
-               (output-stream (wookie:start-response wk-response :status (return-code response) :headers (list :content-type (trivial-mimes:mime (data response))))))
+               (output-stream (wookie:start-response wk-response :status (return-code response) :headers (list :content-type (content-type response)))))
            (with-open-file (input-stream (data response) :element-type '(unsigned-byte 8))
              (loop for n = (read-sequence buffer input-stream)
                    while (< 0 n) do
@@ -109,7 +109,7 @@
            (wookie:finish-response wk-response)))
         
         ((or string (array (unsigned-byte 8)))
-         (wookie:send-response wk-response :status (return-code response) :body (data response) :headers (list :content-type (or (content-type response) "text/plain"))))
+         (wookie:send-response wk-response :status (return-code response) :body (data response) :headers (list :content-type (content-type response))))
 
         (null (error 'request-empty :request NIL)))
       wk-response)))
