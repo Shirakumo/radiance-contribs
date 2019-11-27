@@ -182,11 +182,16 @@
     (when cookies-header
       (loop with cookies = (make-hash-table :test 'equalp)
             for pair in (uiop:split-string cookies-header :separator '(#\;)) do
-              (destructuring-bind (key val)
-                  (uiop:split-string pair :separator '(#\=))
+              (let* ((=-pos (position #\= pair))
+                     (key (subseq pair 0 =-pos))
+                     (val (subseq pair (1+ =-pos))))
                 (setf (gethash (string-trim '(#\space) key) cookies)
                       (string-trim '(#\space) val)))
             finally (return cookies)))))
+
+(defun extract-header-value (header)
+  (let ((search-eq (position #\: header)))
+    (subseq header (+ search-eq 2))))
 
 (defun transform-response (request response)
   (list (return-code response)
@@ -195,10 +200,9 @@
                 for value being the hash-values of (headers response)
                 do (push value headers)
                    (push (intern (string-upcase header) "KEYWORD") headers))
-          (loop for cookie being the hash-keys of (cookies response)
-                for value being the hash-values of (cookies response)
-                do (push (cookie-header value) headers)
-                   (push (intern (string-upcase cookie) "KEYWORD") headers))
+          (loop for value being the hash-values of (cookies response)
+                do (push (extract-header-value (cookie-header value)) headers)
+                   (push :set-cookie headers))
           headers)
         (etypecase (data response)
           (string (list (data response)))
@@ -243,6 +247,6 @@
                 (v:severe :server "Error in cleanup: ~a" err)))
             ;; Present output
             (transform-response request response)))
-      (abort ()
+      (abort (err)
         :report "Abort and send back an internal error."
         (error 'internal-error :message "Oh dear.")))))

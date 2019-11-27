@@ -94,6 +94,14 @@
                  (write-char char out)
                  (format out "%~2,'0x" (char-code char))))))
 
+(defconstant +default-buffer-size+ 4096)
+
+(defun read-unprocessed-body (stream content-length)
+  (let ((buffer (make-array +default-buffer-size+ :element-type (stream-element-type stream))))
+    (loop for read = (read-sequence buffer stream :end (min +default-buffer-size+ content-length))
+       until (= 0 read)
+       do (decf content-length read))))
+
 (defun handle-radiance-response (response request)
   (declare (optimize (speed 3)))
   (let ((*request* request)
@@ -101,6 +109,8 @@
     (restart-case
         (handler-bind
             ((error #'handle-condition))
+          (when (body-stream request)
+            (read-unprocessed-body (body-stream request) (or (content-length request) 0)))
           (l:trace :server "Post-process: ~a" response)
           ;; Process attributes
           (setf (hunchentoot:return-code*) (return-code response)

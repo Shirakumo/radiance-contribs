@@ -8,6 +8,7 @@
 (define-module #:i-wookie
   (:use #:cl #:radiance)
   (:implements #:server))
+(in-package #:i-wookie)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (setf wookie:*enabled-plugins* '(:get :post :cookie :multipart))
@@ -75,16 +76,15 @@
 
 (defun handle-request (wk-request wk-response)
   (let ((response (request (parse-uri (format NIL "~a~a"
-                                              (gethash "host" (headers request))
+                                              (gethash "host" (wookie:request-headers wk-request))
                                               (urlencode:urldecode
                                                (subseq (wookie:request-resource wk-request) 0
-                                                       (position #\? (wookie:request-resource wk-request)))
-                                               :lenientp T)))
+                                                       (position #\? (wookie:request-resource wk-request))))))
                            :http-method (wookie:request-method wk-request)
                            :headers (wookie:request-headers wk-request)
-                           :post (cond ((search "application/x-www-form-urlencoded" (gethash "content-type" (headers request)))
+                           :post (cond ((search "application/x-www-form-urlencoded" (gethash "content-type" (wookie:request-headers wk-request)))
                                         (wookie:plugin-request-data :post wk-request))
-                                       ((search "multipart/form-data" (gethash "content-type" (headers request)))
+                                       ((search "multipart/form-data" (gethash "content-type" (wookie:request-headers wk-request)))
                                         (merge-hash-tables (getf (wookie:plugin-request-data :multipart wk-request) :hash-file)
                                                            (getf (wookie:plugin-request-data :multipart wk-request) :hash-form))))
                            :get (wookie:plugin-request-data :get wk-request)
@@ -100,7 +100,7 @@
       (etypecase (data response)
         (pathname
          (let ((buffer (make-array 1024 :element-type '(unsigned-byte 8)))
-               (output-stream (wookie:start-response wk-response :status (return-code response))))
+               (output-stream (wookie:start-response wk-response :status (return-code response) :headers (list :content-type (content-type response)))))
            (with-open-file (input-stream (data response) :element-type '(unsigned-byte 8))
              (loop for n = (read-sequence buffer input-stream)
                    while (< 0 n) do
@@ -109,7 +109,7 @@
            (wookie:finish-response wk-response)))
         
         ((or string (array (unsigned-byte 8)))
-         (wookie:send-response wk-response :status (return-code response) :body (data response)))
+         (wookie:send-response wk-response :status (return-code response) :body (data response) :headers (list :content-type (content-type response))))
 
         (null (error 'request-empty :request NIL)))
       wk-response)))
