@@ -17,4 +17,5 @@
 
 (defpackage #:radiance-clip
   (:use #:cl #:radiance #:clip)
+  (:import-from #:r-clip #:resolve-uri)
   (:shadow #:or*))
