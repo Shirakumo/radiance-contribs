@@ -30,7 +30,9 @@
   (let ((string (etypecase collection
                   (symbol (format NIL "~a/~a"
                                   (package-name (symbol-package collection)) (symbol-name collection)))
-                  (string collection))))
+                  (string collection)
+                  (join (return-from ensure-collection-name
+                          (join-string collection))))))
     (unless (valid-name-p string)
       (error 'db:invalid-collection :database *current-db*
                                     :collection collection

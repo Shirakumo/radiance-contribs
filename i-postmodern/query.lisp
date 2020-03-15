@@ -63,3 +63,32 @@
        (QUOTE (format NIL "\"~a\"" (string-downcase (second form))))
        (T (push form *vars*)
         (format NIL "$~a" (length *vars*)))))))
+
+(defstruct (join (:constructor make-join (string)))
+  (string NIL :type string :read-only T))
+
+(defmethod make-load-form ((join join) &optional environment)
+  (declare (ignore environment))
+  `(make-join ,(join-string join)))
+
+(defmacro rdb:join (&whole operand (left-collection left-field) (right-collection right-field) &optional (type :inner))
+  (declare (ignore left-collection left-field right-collection right-field type))
+  (make-join (compile-join-operand (rest operand))))
+
+(defun compile-join-operand (operand)
+  (destructuring-bind ((left-operand left-field) (right-operand right-field) &optional (type :inner))
+      operand
+    (flet ((operand-string (operand)
+             (etypecase operand
+               (symbol (format NIL "~s" (ensure-collection-name operand)))
+               (cons (compile-join-operand operand)))))
+      (format NIL "(~a ~a JOIN ~a ON ~(~s = ~s~))"
+              (operand-string left-operand)
+              (ecase type
+                (:inner "INNER")
+                (:left "LEFT")
+                (:right "RIGHT")
+                (:outer "FULL"))
+              (operand-string right-operand)
+              (symbol-name left-field)
+              (symbol-name right-field)))))
