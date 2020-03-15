@@ -63,8 +63,8 @@
           (err "Invalid name, only a-z, - and _ are allowed."))
         (ecase type
           (:ID
-           (format NIL "\"~a\" INTEGER~@[ REFERENCES ~a(\"_id\")"
-                   (when arg (ensure-collection-name arg))))
+           (format NIL "\"~a\" INTEGER~@[ REFERENCES ~s(\"_id\")~]"
+                   name (when arg (ensure-collection-name arg))))
           (:BOOLEAN
            (when arg (err "BOOLEAN cannot accept an argument."))
            (format NIL "\"~a\" BOOLEAN" name))
