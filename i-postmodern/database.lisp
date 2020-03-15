@@ -43,7 +43,7 @@
           (ecase if-exists
             (:ignore (return-from db:create NIL))
             (:error (error 'db:collection-already-exists :database *current-db* :collection collection))))
-        (postmodern:query (format NIL "CREATE SEQUENCE \"~a/ID-SEQ\";" collection))
+        (postmodern:query (format NIL "CREATE SEQUENCE IF NOT EXISTS \"~a/ID-SEQ\";" collection))
         (postmodern:query query)
         (postmodern:query (format NIL "CREATE INDEX ON \"~a\" (\"_id\")" collection))
         (dolist (index indices)
