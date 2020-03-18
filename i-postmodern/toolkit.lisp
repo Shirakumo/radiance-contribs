@@ -44,4 +44,4 @@
            (error 'db:invalid-collection :database *current-db*
                                          :collection collection
                                          :message "Collection does not exist on database.")))))
-    string))
+    (prin1-to-string string)))

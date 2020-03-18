@@ -80,9 +80,9 @@
       operand
     (flet ((operand-string (operand)
              (etypecase operand
-               (symbol (format NIL "~s" (ensure-collection-name operand)))
+               (symbol (ensure-collection-name operand))
                (cons (compile-join-operand operand)))))
-      (format NIL "(~a ~a JOIN ~a ON ~(~s = ~s~))"
+      (format NIL "(~a AS a ~a JOIN ~a AS b ON ~(A.~s = B.~s~))"
               (operand-string left-operand)
               (ecase type
                 (:inner "INNER")

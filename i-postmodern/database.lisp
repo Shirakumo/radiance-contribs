@@ -36,7 +36,7 @@
   (flet ((err (msg) (error 'db:invalid-collection :database *current-db* :collection collection :message msg)))
     (unless structure (err "Structure cannot be empty."))
     (let* ((collection (ensure-collection-name collection))
-           (query (format NIL "CREATE TABLE \"~a\" (\"_id\" INTEGER PRIMARY KEY DEFAULT nextval('\"~:*~a/ID-SEQ\"'), ~{~a~^, ~});"
+           (query (format NIL "CREATE TABLE ~s (\"_id\" INTEGER PRIMARY KEY DEFAULT nextval('\"~:*~a/ID-SEQ\"'), ~{~a~^, ~});"
                           collection (mapcar #'compile-field structure))))
       (with-connection
         (when (%table-exists-p collection)
@@ -45,12 +45,12 @@
             (:error (error 'db:collection-already-exists :database *current-db* :collection collection))))
         (postmodern:query (format NIL "CREATE SEQUENCE IF NOT EXISTS \"~a/ID-SEQ\";" collection))
         (postmodern:query query)
-        (postmodern:query (format NIL "CREATE INDEX ON \"~a\" (\"_id\")" collection))
+        (postmodern:query (format NIL "CREATE INDEX ON ~s (\"_id\")" collection))
         (dolist (index indices)
           (let ((index (if (listp index) index (list index))))
             (unless (every (lambda (index) (member index `((_id) ,@structure) :key #'car :test #'string-equal)) index)
               (err (format NIL "Index on field ~s requested but it does not exist." index)))
-            (postmodern:query (format NIL "CREATE INDEX ON \"~a\" (~{\"~(~a~)\"~^, ~})"
+            (postmodern:query (format NIL "CREATE INDEX ON ~s (~{\"~(~a~)\"~^, ~})"
                                       collection index)))))
       T)))
 
@@ -63,25 +63,25 @@
           (err "Invalid name, only a-z, - and _ are allowed."))
         (ecase type
           (:ID
-           (format NIL "\"~a\" INTEGER~@[ REFERENCES ~s(\"_id\")~]"
+           (format NIL "~s INTEGER~@[ REFERENCES ~s(\"_id\")~]"
                    name (when arg (ensure-collection-name arg))))
           (:BOOLEAN
            (when arg (err "BOOLEAN cannot accept an argument."))
-           (format NIL "\"~a\" BOOLEAN" name))
+           (format NIL "~s BOOLEAN" name))
           (:INTEGER
-           (format NIL "\"~a\" ~a" name
+           (format NIL "~s ~a" name
                    (ecase arg ((1 2) "SMALLINT") ((3 4) "INTEGER") ((5 6 7 8) "BIGINT") ((NIL) "INTEGER"))))
           (:FLOAT
            (when arg (err "FLOAT cannot accept an argument."))
-           (format NIL "\"~a\" DOUBLE PRECISION" name))
+           (format NIL "~s DOUBLE PRECISION" name))
           (:CHARACTER
            (error "CURRENTLY NOT SUPPORTED."))
           (:VARCHAR
            (unless arg (err "VARCHAR requires a length argument."))
-           (format NIL "\"~a\" VARCHAR(~d)" name arg))
+           (format NIL "~s VARCHAR(~d)" name arg))
           (:TEXT
            (when arg (err "TEXT cannot accept an argument."))
-           (format NIL "\"~a\" TEXT" name)))))))
+           (format NIL "~s TEXT" name)))))))
 
 (defun db:structure (collection)
   (with-connection
@@ -108,13 +108,13 @@
 (defun db:empty (collection)
   (with-collection-existing (collection)
     (with-connection
-      (postmodern:query (format NIL "TRUNCATE TABLE \"~a\" CASCADE;" collection))
+      (postmodern:query (format NIL "TRUNCATE TABLE ~s CASCADE;" collection))
       T)))
 
 (defun db:drop (collection)
   (with-collection-existing (collection)
     (with-connection
-      (postmodern:query (format NIL "DROP TABLE \"~a\" CASCADE;" collection))
+      (postmodern:query (format NIL "DROP TABLE ~s CASCADE;" collection))
       (postmodern:query (format NIL "DROP SEQUENCE \"~a/ID-SEQ\" CASCADE;" collection))
       T)))
 
@@ -142,7 +142,7 @@
 
 (defun db:iterate (collection query function &key fields skip amount sort accumulate unique)
   (with-collection-existing (collection)
-    (with-query ((make-query (format NIL "SELECT~:[~; DISTINCT~] ~:[*~;~:*~{\"~a\"~^ ~}~] FROM \"~a\""
+    (with-query ((make-query (format NIL "SELECT~:[~; DISTINCT~] ~:[*~;~:*~{~s~^ ~}~] FROM ~a"
                                      unique (mapcar #'string-downcase fields) collection)
                              query skip amount sort) query vars)
       (exec-query query vars (if accumulate (collecting-iterator function) (dropping-iterator function))))))
@@ -159,12 +159,12 @@
 (defun db:count (collection query)
   (with-collection-existing (collection)
     (with-query (query where vars)
-      (let ((query (format NIL "SELECT COUNT(*) AS c FROM \"~a\" ~a;" collection where)))
+      (let ((query (format NIL "SELECT COUNT(*) AS c FROM ~a ~a;" collection where)))
         (car (exec-query query vars (collecting-iterator #'(lambda (ta) (gethash "c" ta)))))))))
 
 (defun db:insert (collection data)
   (with-collection-existing (collection)
-    (let ((query (format NIL "INSERT INTO \"~a\" (~~{\"~~a\"~~^, ~~}) VALUES (~~{$~~a~~^, ~~}) RETURNING \"_id\";" collection)))
+    (let ((query (format NIL "INSERT INTO ~a (~~{\"~~a\"~~^, ~~}) VALUES (~~{$~~a~~^, ~~}) RETURNING \"_id\";" collection)))
       (macrolet ((looper (&rest iters)
                    `(loop ,@iters 
                           for i from 1
@@ -182,18 +182,18 @@
 
 (defun db:remove (collection query &key skip amount sort)
   (with-collection-existing (collection)
-    (with-query ((make-query (format NIL "DELETE FROM \"~a\" WHERE ctid IN (SELECT ctid FROM \"~:*~a\" " collection)
+    (with-query ((make-query (format NIL "DELETE FROM ~a WHERE ctid IN (SELECT ctid FROM \"~:*~a\" " collection)
                              query skip amount sort) query vars)
       (exec-query (format NIL "~a );" query) vars)
       T)))
 
 (defun %field-clause (s a c p)
   (declare (ignore c p))
-  (format s "\"~a\" = $~a" (car a) (cdr a)))
+  (format s "~s = $~a" (car a) (cdr a)))
 
 (defun db:update (collection query data &key skip amount sort)
   (with-collection-existing (collection)
-    (with-query ((make-query (format NIL "UPDATE \"~a\" SET ~~{~~/i-postmodern::%field-clause/~~^, ~~} WHERE ctid IN (SELECT ctid FROM \"~:*~a\" "
+    (with-query ((make-query (format NIL "UPDATE ~a SET ~~{~~/i-postmodern::%field-clause/~~^, ~~} WHERE ctid IN (SELECT ctid FROM \"~:*~a\" "
                                      collection)
                              query skip amount sort) query vars)
       (macrolet ((looper (&rest iters)
