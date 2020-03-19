@@ -26,7 +26,7 @@
     (postmodern:list-tables T)))
 
 (defun %table-exists-p (table)
-  (postmodern:query (format NIL "select 1 from INFORMATION_SCHEMA.COLUMNS where TABLE_NAME = '~a'" table)))
+  (postmodern:query (format NIL "select 1 from INFORMATION_SCHEMA.COLUMNS where TABLE_NAME = '~a'" (subseq table 1 (1- (length table))))))
 
 (defun db:collection-exists-p (collection)
   (with-connection
