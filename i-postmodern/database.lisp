@@ -182,7 +182,7 @@
 
 (defun db:remove (collection query &key skip amount sort)
   (with-collection-existing (collection)
-    (with-query ((make-query (format NIL "DELETE FROM ~a WHERE ctid IN (SELECT ctid FROM \"~:*~a\" " collection)
+    (with-query ((make-query (format NIL "DELETE FROM ~a WHERE ctid IN (SELECT ctid FROM ~:*~a " collection)
                              query skip amount sort) query vars)
       (exec-query (format NIL "~a );" query) vars)
       T)))
@@ -193,7 +193,7 @@
 
 (defun db:update (collection query data &key skip amount sort)
   (with-collection-existing (collection)
-    (with-query ((make-query (format NIL "UPDATE ~a SET ~~{~~/i-postmodern::%field-clause/~~^, ~~} WHERE ctid IN (SELECT ctid FROM \"~:*~a\" "
+    (with-query ((make-query (format NIL "UPDATE ~a SET ~~{~~/i-postmodern::%field-clause/~~^, ~~} WHERE ctid IN (SELECT ctid FROM ~:*~a "
                                      collection)
                              query skip amount sort) query vars)
       (macrolet ((looper (&rest iters)
@@ -201,7 +201,7 @@
                           for i from (1+ (length vars))
                           collect (or value :null) into values
                           collect (cons (string-downcase field) i) into fields
-                          finally (exec-query (format NIL "~a );" (format NIL query fields)) (append vars values)))))
+                          finally (exec-query (print (format NIL "~a );" (format NIL query fields))) (append vars values)))))
         (etypecase data
           (hash-table
            (looper for field being the hash-keys of data
