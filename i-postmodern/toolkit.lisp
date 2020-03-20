@@ -45,3 +45,8 @@
                                          :collection collection
                                          :message "Collection does not exist on database.")))))
     (prin1-to-string string)))
+
+(defun collection-sequence (collection)
+  (with-output-to-string (out)
+    (write-sequence collection out :end (1- (length collection)))
+    (write-sequence "/ID-SEQ\"" out)))

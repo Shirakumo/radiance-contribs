@@ -36,21 +36,21 @@
   (flet ((err (msg) (error 'db:invalid-collection :database *current-db* :collection collection :message msg)))
     (unless structure (err "Structure cannot be empty."))
     (let* ((collection (ensure-collection-name collection))
-           (query (format NIL "CREATE TABLE ~s (\"_id\" INTEGER PRIMARY KEY DEFAULT nextval('\"~:*~a/ID-SEQ\"'), ~{~a~^, ~});"
-                          collection (mapcar #'compile-field structure))))
+           (query (format NIL "CREATE TABLE ~a (\"_id\" INTEGER PRIMARY KEY DEFAULT nextval('~a'), ~{~a~^, ~});"
+                          collection (collection-sequence collection) (mapcar #'compile-field structure))))
       (with-connection
         (when (%table-exists-p collection)
           (ecase if-exists
             (:ignore (return-from db:create NIL))
             (:error (error 'db:collection-already-exists :database *current-db* :collection collection))))
-        (postmodern:query (format NIL "CREATE SEQUENCE IF NOT EXISTS \"~a/ID-SEQ\";" collection))
+        (postmodern:query (format NIL "CREATE SEQUENCE IF NOT EXISTS ~a;" (collection-sequence collection)))
         (postmodern:query query)
-        (postmodern:query (format NIL "CREATE INDEX ON ~s (\"_id\")" collection))
+        (postmodern:query (format NIL "CREATE INDEX ON ~a (\"_id\")" collection))
         (dolist (index indices)
           (let ((index (if (listp index) index (list index))))
             (unless (every (lambda (index) (member index `((_id) ,@structure) :key #'car :test #'string-equal)) index)
               (err (format NIL "Index on field ~s requested but it does not exist." index)))
-            (postmodern:query (format NIL "CREATE INDEX ON ~s (~{\"~(~a~)\"~^, ~})"
+            (postmodern:query (format NIL "CREATE INDEX ON ~a (~{\"~(~a~)\"~^, ~})"
                                       collection index)))))
       T)))
 
@@ -63,7 +63,7 @@
           (err "Invalid name, only a-z, - and _ are allowed."))
         (ecase type
           (:ID
-           (format NIL "~s INTEGER~@[ REFERENCES ~s(\"_id\")~]"
+           (format NIL "~s INTEGER~@[ REFERENCES ~a(\"_id\")~]"
                    name (when arg (ensure-collection-name arg))))
           (:BOOLEAN
            (when arg (err "BOOLEAN cannot accept an argument."))
@@ -115,7 +115,7 @@
   (with-collection-existing (collection)
     (with-connection
       (postmodern:query (format NIL "DROP TABLE ~s CASCADE;" collection))
-      (postmodern:query (format NIL "DROP SEQUENCE \"~a/ID-SEQ\" CASCADE;" collection))
+      (postmodern:query (format NIL "DROP SEQUENCE ~a CASCADE;" (collection-sequence collection)))
       T)))
 
 (defun collecting-iterator (function)
