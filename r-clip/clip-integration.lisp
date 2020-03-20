@@ -97,6 +97,17 @@
                                  (:fancy (format-fancy-date stamp)))))
   node)
 
+(lquery:define-lquery-function select (node value)
+  (let ((value (typecase value
+                 (string value)
+                 (T (princ-to-string value)))))
+    (loop for child across (plump:children node)
+          do (when (and (typep child 'plump:element)
+                        (string= (plump:tag-name child) "option")
+                        (string= (plump:attribute child "value") value))
+               (setf (plump:attribute child "selected") "selected"))))
+  node)
+
 ;; We need to do this ugly hack in order to defer it to when the system is actually loaded.
 ;; This is necessary to bypass a nasty dependency on the database interface through the
 ;; data-model interface, when it really isn't necessary to have it.
