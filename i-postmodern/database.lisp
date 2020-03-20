@@ -26,7 +26,8 @@
     (postmodern:list-tables T)))
 
 (defun %table-exists-p (table)
-  (postmodern:query (format NIL "select 1 from INFORMATION_SCHEMA.COLUMNS where TABLE_NAME = '~a'" (subseq table 1 (1- (length table))))))
+  (postmodern:query (format NIL "select 1 from INFORMATION_SCHEMA.COLUMNS where TABLE_NAME = '~a'"
+                            (subseq table 1 (1- (length table))))))
 
 (defun db:collection-exists-p (collection)
   (with-connection
@@ -85,36 +86,37 @@
 
 (defun db:structure (collection)
   (with-connection
-    (rest 
-     (mapcar (lambda (column)
-               (destructuring-bind (name type size) column
-                 (list name (cond ((string= type "boolean")
-                                   :BOOLEAN)
-                                  ((string= type "integer")
-                                   :INTEGER)
-                                  ((string= type "smallint")
-                                   (list :INTEGER 2))
-                                  ((string= type "bigint")
-                                   (list :INTEGER 8))
-                                  ((string= type "double precision")
-                                   :FLOAT)
-                                  ((string= type "character varying")
-                                   (list :VARCHAR size))
-                                  ((string= type "text")
-                                   :TEXT)))))
-             (postmodern:query (format NIL "select column_name, data_type, character_maximum_length from INFORMATION_SCHEMA.COLUMNS where TABLE_NAME = '~a'"
-                                       (ensure-collection-name collection T)))))))
+      (let ((table (ensure-collection-name collection T)))
+        (rest 
+         (mapcar (lambda (column)
+                   (destructuring-bind (name type size) column
+                     (list name (cond ((string= type "boolean")
+                                       :BOOLEAN)
+                                      ((string= type "integer")
+                                       :INTEGER)
+                                      ((string= type "smallint")
+                                       (list :INTEGER 2))
+                                      ((string= type "bigint")
+                                       (list :INTEGER 8))
+                                      ((string= type "double precision")
+                                       :FLOAT)
+                                      ((string= type "character varying")
+                                       (list :VARCHAR size))
+                                      ((string= type "text")
+                                       :TEXT)))))
+                 (postmodern:query (format NIL "select column_name, data_type, character_maximum_length from INFORMATION_SCHEMA.COLUMNS where TABLE_NAME = '~a'"
+                                           (subseq table 1 (1- (length table))))))))))
 
 (defun db:empty (collection)
   (with-collection-existing (collection)
     (with-connection
-      (postmodern:query (format NIL "TRUNCATE TABLE ~s CASCADE;" collection))
+      (postmodern:query (format NIL "TRUNCATE TABLE ~a CASCADE;" collection))
       T)))
 
 (defun db:drop (collection)
   (with-collection-existing (collection)
     (with-connection
-      (postmodern:query (format NIL "DROP TABLE ~s CASCADE;" collection))
+      (postmodern:query (format NIL "DROP TABLE ~a CASCADE;" collection))
       (postmodern:query (format NIL "DROP SEQUENCE ~a CASCADE;" (collection-sequence collection)))
       T)))
 
@@ -201,7 +203,7 @@
                           for i from (1+ (length vars))
                           collect (or value :null) into values
                           collect (cons (string-downcase field) i) into fields
-                          finally (exec-query (print (format NIL "~a );" (format NIL query fields))) (append vars values)))))
+                          finally (exec-query (format NIL "~a );" (format NIL query fields)) (append vars values)))))
         (etypecase data
           (hash-table
            (looper for field being the hash-keys of data

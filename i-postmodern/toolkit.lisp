@@ -37,14 +37,15 @@
       (error 'db:invalid-collection :database *current-db*
                                     :collection collection
                                     :message "Invalid name, only a-z, - and _ are allowed."))
+    (setf string (prin1-to-string string))
     (when check-exists
       (call-with-connection
        (lambda ()
-         (unless (postmodern:table-exists-p string)
+         (unless (%table-exists-p string)
            (error 'db:invalid-collection :database *current-db*
                                          :collection collection
                                          :message "Collection does not exist on database.")))))
-    (prin1-to-string string)))
+    string))
 
 (defun collection-sequence (collection)
   (with-output-to-string (out)
