@@ -93,7 +93,7 @@
     (let ((new-pw (auth::recover user code)))
       (auth:associate user)
       (if (string= "true" (post/get "browser"))
-          (redirect-to-landing
+          (redirect
            (if (admin:implementation)
                (multiple-value-bind (uri query fragment)
                    (resource :admin :page "settings" "password")
