@@ -10,7 +10,6 @@
 (in-package #:i-json)
 
 (defgeneric serialize (o)
-  (:method (o) o)
   (:method ((o string)) o)
   (:method ((o list))
     (mapcar #'serialize o))
@@ -31,13 +30,12 @@
           do (setf (gethash (serialize s) n)
                    (serialize v))
           finally (return n)))
-  (:method ((o standard-object))
-    ;; We don't want secure data leaking out...
-    (princ-to-string o))
-  (:method ((o function))
-    (princ-to-string o))
-  (:method ((o pathname))
-    (princ-to-string o)))
+  (:method ((o T))
+    (handler-case
+        (api-serialize o)
+      (api-unserializable-object (e)
+        (declare (ignore e))
+        (princ-to-string o)))))
 
 (define-api-format json (object)
   (setf (content-type *response*) "application/json; charset=utf-8")
