@@ -136,3 +136,6 @@
   `(dolist (,modelvar (get ,collection ,(ensure-query-form query)))
      (with-model-fields ,modelvar ,fields
        ,@body)))
+
+(defmethod radiance:api-serialize ((model data-model))
+  (field-table model))
