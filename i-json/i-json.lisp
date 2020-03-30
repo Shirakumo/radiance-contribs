@@ -11,6 +11,8 @@
 
 (defgeneric serialize (o)
   (:method ((o string)) o)
+  (:method ((o real)) o)
+  (:method ((o symbol)) o)
   (:method ((o list))
     (mapcar #'serialize o))
   (:method ((o vector))
