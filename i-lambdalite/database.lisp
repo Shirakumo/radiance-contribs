@@ -333,6 +333,7 @@
          (:OR `(or ,@(mapcar #'compile-query (cdr form))))
          (:NOT `(not ,(compile-query (second form))))
          (:FIELD `(getf ,*rowvar* ,(ensure-field (second form))))
+         (:NULL `(null ,(compile-query (second form))))
          (QUOTE (compile-query `(:FIELD ,(second form))))
          (T form))))))
 
