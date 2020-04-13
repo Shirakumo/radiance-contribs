@@ -214,7 +214,7 @@
 
 (defmacro db:with-transaction (() &body body)
   `(with-connection
-     (postmodern:with-transaction ()
+     (postmodern:with-logical-transaction ()
        ,@body)))
 
 
