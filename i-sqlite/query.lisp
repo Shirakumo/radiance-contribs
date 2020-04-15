@@ -34,7 +34,7 @@
   (let ((field (first a))
         (order (second a)))
     (ecase order (:DESC) (:ASC))
-    (format s "\"~a\" ~a" (string-downcase field) order)))
+    (format s "~s ~a" (string-downcase field) order)))
 
 (defun make-query (base where skip amount sort)
   (check-type amount (or null (integer 1)))
@@ -81,3 +81,32 @@
         `(cons "" ())
         `(cons ,(format NIL "WHERE ~a" (compile-form query-form))
                (list ,@(nreverse *vars*))))))
+
+(defstruct (join (:constructor make-join (string)))
+  (string NIL :type string :read-only T))
+
+(defmethod make-load-form ((join join) &optional environment)
+  (declare (ignore environment))
+  `(make-join ,(join-string join)))
+
+(defmacro rdb:join (&whole operand (left-collection left-field) (right-collection right-field) &optional (type :inner))
+  (declare (ignore left-collection left-field right-collection right-field type))
+  (make-join (compile-join-operand (rest operand))))
+
+(defun compile-join-operand (operand)
+  (destructuring-bind ((left-operand left-field) (right-operand right-field) &optional (type :inner))
+      operand
+    (flet ((operand-string (operand)
+             (etypecase operand
+               (symbol (ensure-collection-name operand))
+               (cons (compile-join-operand operand)))))
+      (format NIL "(~a AS a ~a JOIN ~a AS b ON ~(A.~s = B.~s~))"
+              (operand-string left-operand)
+              (ecase type
+                (:inner "INNER")
+                (:left "LEFT")
+                (:right "RIGHT")
+                (:outer "FULL"))
+              (operand-string right-operand)
+              (symbol-name left-field)
+              (symbol-name right-field)))))
