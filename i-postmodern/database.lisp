@@ -75,6 +75,9 @@
           (:FLOAT
            (when arg (err "FLOAT cannot accept an argument."))
            (format NIL "~s DOUBLE PRECISION" name))
+          (:BYTE
+           (unless arg (err "BYTE requires a length argument."))
+           (format NIL "~s BYTEA(~d)" name arg))
           (:CHARACTER
            (error "CURRENTLY NOT SUPPORTED."))
           (:VARCHAR
