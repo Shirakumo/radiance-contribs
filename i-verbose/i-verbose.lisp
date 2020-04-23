@@ -38,4 +38,5 @@
   (setf v:*global-controller* (v:make-standard-global-controller)))
 
 (define-trigger shutdown-done ()
-  (v:sync))
+  (v:sync)
+  (v:remove-global-controller))
