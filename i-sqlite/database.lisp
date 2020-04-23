@@ -56,7 +56,10 @@
         (err "Invalid name, only a-z, - and _ are allowed."))
       (let ((arg (when (listp type) (prog1 (second type) (setf type (first type))))))
         (case type
-          ((:INTEGER :ID)
+          (:ID
+           (format NIL "~s INTEGER~@[ REFERENCES ~a(\"_id\")~]"
+                   (string-downcase name) (when arg (ensure-collection-name arg))))
+          (:INTEGER
            (format NIL "~s ~a" (string-downcase name)
                    (ecase arg (1 "TINYINT") (2 "SMALLINT") (3 "MEDIUMINT") (4 "INTEGER") ((5 6 7 8) "BIGINT") ((NIL) "INTEGER"))))
           (:FLOAT
