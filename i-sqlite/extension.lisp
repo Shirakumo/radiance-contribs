@@ -45,7 +45,8 @@
    (list #+unix #p"/usr/lib/sqlite3/pcre.so"
          #+unix #p"/usr/local/lib/sqlite3/pcre.so"
          #+windows #p"C:/Windows/System32/sqlite3-pcre.dll"
-         #+windows #p"C:/Windows/System32/pcre.dll")))
+         #+windows #p"C:/Windows/System32/pcre.dll"
+         cffi:*foreign-library-directories*)))
 
 (defun load-pcre ()
   (with-simple-restart (ignore "Ignore the fact that SQLite won't have PCRE support and pray that all goes well anyway.")
