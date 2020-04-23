@@ -37,16 +37,15 @@
   (:report (lambda (c s) (declare (ignore c)) (format s "Could not find the sqlite3 pcre extension library. Please adapt I-SQLITE:*SQLITE-PCRE-PATHS*"))))
 
 (defvar *sqlite-pcre-paths*
-  (append
-   (loop for name in '("sqlite3-pcre" "pcre3" "pcre")
-         for fqn = (format NIL "~a.~a" name #+windows "dll"
-                                            #+unix "so")
-         appending (list name fqn))
-   (list #+unix #p"/usr/lib/sqlite3/pcre.so"
-         #+unix #p"/usr/local/lib/sqlite3/pcre.so"
-         #+windows #p"C:/Windows/System32/sqlite3-pcre.dll"
-         #+windows #p"C:/Windows/System32/pcre.dll"
-         cffi:*foreign-library-directories*)))
+  (loop for name in '("sqlite3-pcre" "pcre3" "pcre")
+        for fqn = (format NIL "~a.~a" name #+windows "dll"
+                                           #+unix "so")
+        appending (loop for dir in (list* #+unix #p"/usr/lib/"
+                                          #+unix #p"/usr/lib/sqlite3/"
+                                          #+unix #p"/usr/local/lib/sqlite3/"
+                                          #+windows #p"C:/Windows/System32/"
+                                          cffi:*foreign-library-directories*)
+                        collect (merge-pathnames fqn dir))))
 
 (defun load-pcre ()
   (with-simple-restart (ignore "Ignore the fact that SQLite won't have PCRE support and pray that all goes well anyway.")
@@ -55,3 +54,11 @@
            thereis (when (probe-file path)
                      (sqlite::load-extension path)))
      (error 'pcre-not-found))))
+
+(deploy:define-hook (:deploy copy-pcre-extension) (directory)
+  (let ((source (loop for path in *sqlite-pcre-paths*
+                      do (when (probe-file path) (return path)))))
+    (when source
+      (uiop:copy-file source
+                      (make-pathname :name "sqlite3-pcre" :type #+windows "dll" #+unix "so"
+                                     :defaults directory)))))
