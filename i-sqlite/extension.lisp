@@ -33,7 +33,7 @@
   extensionpath)
 
 ;; We only really do this for PCRE.
-(define-condition pcre-not-found (error) ()
+(define-condition pcre-not-found (warning) ()
   (:report (lambda (c s) (declare (ignore c)) (format s "Could not find the sqlite3 pcre extension library. Please adapt I-SQLITE:*SQLITE-PCRE-PATHS*"))))
 
 (defvar *sqlite-pcre-paths*
@@ -53,7 +53,7 @@
      (loop for path in *sqlite-pcre-paths*
            thereis (when (probe-file path)
                      (sqlite::load-extension path)))
-     (error 'pcre-not-found))))
+     (warn 'pcre-not-found))))
 
 (deploy:define-hook (:deploy copy-pcre-extension) (directory)
   (let ((source (loop for path in *sqlite-pcre-paths*
