@@ -38,5 +38,5 @@
       (let ((collection (coerce-collection-name name)))
         (when check-exists
           (when (= 0 (db:count "sqlite_master" (db:query (:and (:= 'type "table") (:= 'name collection)))))
-            (error 'database-invalid-collection :collection collection :message "Collection does not exist on database.")))
+            (error 'db:invalid-collection :collection collection :message "Collection does not exist on database.")))
         (prin1-to-string collection))))

@@ -82,16 +82,28 @@
         `(cons ,(format NIL "WHERE ~a" (compile-form query-form))
                (list ,@(nreverse *vars*))))))
 
-(defstruct (join (:constructor make-join (string)))
-  (string NIL :type string :read-only T))
+(defstruct (join (:constructor make-join (string collections)))
+  (string NIL :type string :read-only T)
+  (collections NIL :type list :read-only T))
 
 (defmethod make-load-form ((join join) &optional environment)
   (declare (ignore environment))
-  `(make-join ,(join-string join)))
+  `(make-join ,(join-string join) ',(join-collections join)))
 
 (defmacro rdb:join (&whole operand (left-collection left-field) (right-collection right-field) &optional (type :inner))
   (declare (ignore left-collection left-field right-collection right-field type))
-  (make-join (compile-join-operand (rest operand))))
+  (make-join (compile-join-operand (rest operand))
+             (compile-join-collections (rest operand))))
+
+(defun compile-join-collections (operand)
+  (destructuring-bind ((left-operand _l) (right-operand _r) &optional _t) operand
+    (declare (ignore _l _r _t))
+    (flet ((operand (operand)
+             (etypecase operand
+               (symbol (list (coerce-collection-name operand)))
+               (cons (compile-join-collections operand)))))
+      (append (operand left-operand)
+              (operand right-operand)))))
 
 (defun compile-join-operand (operand)
   (destructuring-bind ((left-operand left-field) (right-operand right-field) &optional (type :inner))
