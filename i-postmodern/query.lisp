@@ -38,7 +38,8 @@
 
 (defun compile-form (form)
   (etypecase form
-    (null (error "NIL not allowed"))
+    (null "FALSE")
+    ((eql T) "TRUE")
     (symbol
      (push form *vars*)
      (format NIL "$~a" (length *vars*)))
