@@ -202,26 +202,26 @@
            (looper for (field . value) in data))))
       T)))
 
-(defmacro with-savepoint ((db &optional (name (gensym "SAVEPOINT"))) &body body)
+(defmacro with-savepoint ((db &optional (name (string (gensym "SAVEPOINT")))) &body body)
   (let ((ok (gensym "SAVEPOINT-COMMIT-"))
         (db-var (gensym "DB-")))
     `(let (,ok
            (,db-var ,db))
-       (execute-non-query ,db-var ,(format NIL "SAVEPOINT ~s" name))
+       (sqlite:execute-non-query ,db-var ,(format NIL "SAVEPOINT ~s" name))
        (unwind-protect
             (multiple-value-prog1
                 (progn ,@body)
               (setf ,ok t))
          (if ,ok
-             (execute-non-query ,db-var ,(format NIL "RELEASE SAVEPOINT ~s" name))
-             (execute-non-query ,db-var ,(format NIL "ROLLBACK TRANSACTION TO SAVEPOINT ~s" name)))))))
+             (sqlite:execute-non-query ,db-var ,(format NIL "RELEASE SAVEPOINT ~s" name))
+             (sqlite:execute-non-query ,db-var ,(format NIL "ROLLBACK TRANSACTION TO SAVEPOINT ~s" name)))))))
 
 (defmacro db:with-transaction (() &body body)
   (let ((thunk (gensym "THUNK")))
     `(flet ((,thunk ()
               ,@body))
        (if *in-transaction*
-           (with-savepoint *current-con*
+           (with-savepoint (*current-con*)
              (,thunk))
            (sqlite:with-transaction *current-con*
              (let ((*in-transaction* T))
