@@ -82,6 +82,10 @@
         `(cons ,(format NIL "WHERE ~a" (compile-form query-form))
                (list ,@(nreverse *vars*))))))
 
+(defvar *join-table-names*
+  (loop for char across "abcdefghijklmnopqrstuvwxyz"
+        collect (string char)))
+
 (defstruct (join (:constructor make-join (string collections)))
   (string NIL :type string :read-only T)
   (collections NIL :type list :read-only T))
@@ -92,8 +96,9 @@
 
 (defmacro rdb:join (&whole operand (left-collection left-field) (right-collection right-field) &optional (type :inner))
   (declare (ignore left-collection left-field right-collection right-field type))
-  (make-join (compile-join-operand (rest operand))
-             (compile-join-collections (rest operand))))
+  (let ((*join-table-names* *join-table-names*))
+    (make-join (compile-join-operand (rest operand))
+               (compile-join-collections (rest operand)))))
 
 (defun compile-join-collections (operand)
   (destructuring-bind ((left-operand _l) (right-operand _r) &optional _t) operand
@@ -108,17 +113,19 @@
 (defun compile-join-operand (operand)
   (destructuring-bind ((left-operand left-field) (right-operand right-field) &optional (type :inner))
       operand
-    (flet ((operand-string (operand)
-             (etypecase operand
-               (symbol (ensure-collection-name operand))
-               (cons (compile-join-operand operand)))))
-      (format NIL "(~a AS a ~a JOIN ~a AS b ON ~(A.~s = B.~s~))"
-              (operand-string left-operand)
-              (ecase type
-                (:inner "INNER")
-                (:left "LEFT")
-                (:right "RIGHT")
-                (:outer "FULL"))
-              (operand-string right-operand)
-              (symbol-name left-field)
-              (symbol-name right-field)))))
+    (let ((lname (pop *join-table-names*))
+          (rname (pop *join-table-names*)))
+      (flet ((operand-string (operand)
+               (etypecase operand
+                 (symbol (ensure-collection-name operand))
+                 (cons (compile-join-operand operand)))))
+        (format NIL "(~a AS ~a ~a JOIN ~a AS ~a ON ~(~a.~s = ~a.~s~))"
+                (operand-string left-operand) lname
+                (ecase type
+                  (:inner "INNER")
+                  (:left "LEFT")
+                  (:right "RIGHT")
+                  (:outer "FULL"))
+                (operand-string right-operand) rname
+                lname (symbol-name left-field)
+                rname (symbol-name right-field))))))
