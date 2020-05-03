@@ -326,6 +326,8 @@
          (:>= (gencomparator '>= 'string>=))
          (:MATCHES `(cl-ppcre:scan ,(compile-query (third form))
                                    ,(compile-query (second form))))
+         (:MATCHES* `(cl-ppcre:scan (cl-ppcre:create-scanner ,(compile-query (third form)) :case-insensitive-mode T)
+                                    ,(compile-query (second form))))
          (:IN `(find ,(compile-query (second form))
                      (list ,@(mapcar #'compile-query (cddr form)))
                      :test #'equal))
