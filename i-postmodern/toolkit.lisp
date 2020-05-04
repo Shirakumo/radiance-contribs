@@ -6,6 +6,9 @@
 
 (in-package #:i-postmodern)
 
+(define-condition db::postgres-error (db:condition error)
+  ((original-error :initarg :original-error :reader original-error)))
+
 (defmacro with-query ((query-form &optional (where 'where) (vars 'vars)) &body body)
   (let ((res (gensym "RESULT")))
     `(let* ((,res ,query-form)
@@ -15,12 +18,20 @@
 
 (defmacro with-collection-existing ((collection) &body body)
   `(let ((,collection (ensure-collection-name ,collection)))
-     (handler-case (progn ,@body)
-       (cl-postgres-error:syntax-error-or-access-violation (err)
-         (when (string= "42P01" (cl-postgres-error::database-error-code err))
-           (error 'db:invalid-collection :database *current-db*
-                                         :collection ,collection
-                                         :message (cl-postgres-error::database-error-message err)))))))
+     (handler-bind ((cl-postgres:database-error
+                       (lambda (err)
+                         (flet ((err (type &rest args)
+                                  (apply #'error type
+                                         :database *current-db*
+                                         :message (cl-postgres-error::database-error-message err)
+                                         args)))
+                           (cond ((string= "42P01" (cl-postgres-error::database-error-code err))
+                                  (err 'db:invalid-collection :collection ,collection))
+                                 ((string= "42703" (cl-postgres-error::database-error-code err))
+                                  (err 'db:invalid-field :field NIL))
+                                 (T
+                                  (err 'db::postgres-error :original-error err)))))))
+       ,@body)))
 
 (defun valid-name-p (name)
   (loop for char across name
