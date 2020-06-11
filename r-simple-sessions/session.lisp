@@ -10,7 +10,9 @@
   (:implements #:session))
 (in-package #:simple-sessions)
 
-(defvar *session-table* (make-hash-table :test 'equalp))
+(defvar *session-table* (make-hash-table :test 'equalp
+                                         #+(or sbcl ecl) :synchronized
+                                         #+(or sbcl ecl) T))
 (defvar *session-key* (make-random-string))
 (defvar *session-timeout-format* '((:year 4) #\. (:month 2) #\. (:day 2) #\Space (:hour 2) #\: (:min 2) #\: (:sec 2)))
 (defvar *prune-thread* NIL)
