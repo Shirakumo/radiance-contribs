@@ -33,13 +33,8 @@
 
 (defmethod initialize-instance :after ((session session) &key)
   (l:debug :session "Starting session ~a" session)
-  (setf (gethash (id session) *session-table*) session)
   (when (boundp '*request*)
-    (setf (gethash 'session (data *request*)) session))
-  (trigger 'session:create session)
-  ;; Trigger cookie creation
-  (setf (session:timeout session)
-        (timeout session)))
+    (setf (gethash 'session (data *request*)) session)))
 
 (defun decode-session (hash)
   (ignore-errors
@@ -54,18 +49,26 @@
   (etypecase session
     (session:session session)
     (string (gethash session *session-table*))
-    (null (when (boundp '*request*)
-            (or (gethash 'session (data *request*))
-                (session:start))))))
+    (null (if (boundp '*request*)
+              (or (gethash 'session (data *request*))
+                  (let ((cookie (cookie "radiance-session")))
+                    (or (and cookie (decode-session cookie))
+                        (make-instance 'session))))
+              (make-instance 'session)))))
 
 (defun session:= (a b)
   (eql (ensure-session a)
        (ensure-session b)))
 
-(defun session:start ()
-  (let ((cookie (cookie "radiance-session")))
-    (or (and cookie (decode-session cookie))
-        (make-instance 'session))))
+(defun session:start (&optional session)
+  (let ((session (or session (ensure-session session))))
+    (unless (gethash (id session) *session-table*)
+      (setf (gethash (id session) *session-table*) session)
+      (trigger 'session:create session)
+      ;; Trigger cookie creation
+      (setf (session:timeout session)
+            (timeout session)))
+    session))
 
 (defun session:list ()
   (loop for session being the hash-values of *session-table*
@@ -74,8 +77,9 @@
 (defun session:get (&optional session-id)
   (let ((session (ensure-session session-id)))
     (when session
-      (or (and (session:active-p session) session)
-          (not (session:end session))))))
+      (if (session:active-p session)
+          session
+          (null (session:end session))))))
 
 (defun session:id (&optional session)
   (id (ensure-session session)))
@@ -86,9 +90,9 @@
       (gethash session/field (fields (ensure-session NIL)))))
 
 (defun (setf session:field) (value session/field &optional (field NIL field-p))
-  (if field-p
-      (setf (gethash field (fields (ensure-session session/field))) value)
-      (setf (gethash session/field (fields (ensure-session NIL))) value)))
+  (let ((session (if field-p (ensure-session session/field) (ensure-session NIL))))
+    (session:start session)
+    (setf (gethash (if field-p field session/field) (fields session)) value)))
 
 (defun session:timeout (&optional session)
   (timeout (ensure-session session)))
@@ -98,6 +102,7 @@
     (setf (timeout session) seconds)
     ;; Update cookie
     (when (and (boundp '*request*) (boundp '*response*))
+      (session:start session)
       ;; Attempt to set a cookie for the root domain
       (if (find #\. (domain *request*))
           (setf (cookie "radiance-session" :path "/" :timeout (timeout session) :http-only T
@@ -118,7 +123,7 @@
 (defun session:active-p (&optional session)
   (let ((session (ensure-session session)))
     (and (< (get-universal-time) (timeout session))
-         session)))
+         (gethash (id session) *session-table*))))
 
 (defun session::prune ()
   (l:info :session "Pruning dead sessions.")
@@ -126,9 +131,6 @@
              (unless (session:active-p session)
                (session:end session)))
            *session-table*))
-
-(define-trigger request ()
-  (session:start))
 
 (defun session::start-prune-thread ()
   (when *prune-thread*
