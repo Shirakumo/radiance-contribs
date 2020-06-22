@@ -183,11 +183,12 @@
 (defun revoke-application (application)
   (north:revoke-application *server* application))
 
-(define-trigger auth:no-associated-user (session)
+(define-trigger auth:no-associated-user ()
   (when (header "Authorization")
-    (let ((oauth-session (north:oauth/verify *server* (translate-request *request*))))
-      (auth:associate (user:get (user oauth-session)) session)
-      (session:end session))))
+    (let* ((oauth-session (north:oauth/verify *server* (translate-request *request*)))
+           (user (user:get (user oauth-session))))
+      (auth:associate user (session:start))
+      (session:end))))
 
 (defun ->alist (&rest tables)
   (let ((alist ()))

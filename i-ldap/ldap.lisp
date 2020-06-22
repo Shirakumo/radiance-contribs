@@ -68,10 +68,10 @@
   (print-unreadable-object (user stream :type T)
     (format stream "~a" (user:username user))))
 
-(defun auth:current (&optional default (session (session:get)))
+(defun auth:current (&optional default session)
   (let ((user (or (session:field session 'user)
-                  (prog1 NIL (trigger 'auth:no-associated-user session))
-                  (session:field session 'user))))
+                  (progn (trigger 'auth:no-associated-user)
+                         (session:field session 'user)))))
     (if user
         (user:get user)
         (and default (user:get default :if-does-not-exist :error)))))

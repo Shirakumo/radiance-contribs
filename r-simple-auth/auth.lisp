@@ -28,11 +28,11 @@ not be sent a new mail before then."
   (defaulted-config (make-random-string) :salt)
   (defaulted-config "open" :registration))
 
-(defun auth:current (&optional default (session (session:get)))
+(defun auth:current (&optional default session)
   (or (when session
-        (or (session:field session 'user)
-            (trigger 'auth:no-associated-user session)
-            (session:field session 'user)))
+        (session:field session 'user))
+      (progn (trigger 'auth:no-associated-user)
+             (session:field session 'user))
       (when default
         (user:get default :if-does-not-exist :error))))
 
