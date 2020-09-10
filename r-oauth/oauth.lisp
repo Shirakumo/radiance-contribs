@@ -180,6 +180,10 @@
 (defun application (key)
   (north:application *server* key))
 
+(defun applications ()
+  (loop for key in (db:select 'applications (db:query :all) :fields '(key))
+        collect (north:application *server* (gethash "key" key))))
+
 (defun revoke-application (application)
   (north:revoke-application *server* application))
 

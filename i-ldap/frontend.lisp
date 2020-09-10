@@ -35,6 +35,7 @@
   (let ((user (user:get username)))
     (unless user (error 'auth::invalid-password))
     (auth::check-password user password)
+    (session:start)
     (auth:associate user)
     (if (string= "true" (post/get "browser"))
         (redirect-to-landing (if (admin:implementation) (resource :admin :page) #@"/"))
