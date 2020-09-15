@@ -39,16 +39,17 @@ not be sent a new mail before then."
 (defun auth:associate (user &optional (session (session:get)))
   (let ((user (etypecase user
                 (user:user user)
-                ((or string integer) (user:get user)))))
-    (session:start session)
+                ((or string integer) (user:get user))))
+        (session (or session (session:start))))
     (l:debug :auth "Associating ~a with ~a and prolonging for ~a"
              session user auth:*login-timeout*)
     (setf (session:field session 'user) user)
     (incf (session:timeout session)
-          (case auth:*login-timeout*
-            ((NIL) 0)
-            ((T) (* 60 60 24 365 100))
-            (otherwise auth:*login-timeout*)))
+          (+ (get-universal-time)
+             (case auth:*login-timeout*
+               ((NIL) 0)
+               ((T) (* 60 60 24 365 100))
+               (otherwise auth:*login-timeout*))))
     (trigger 'auth:associate session)))
 
 (defun auth::set-password (user password)
