@@ -12,21 +12,11 @@
 
 (defvar *listeners* (make-hash-table :test 'eql))
 
-(defclass prng-safe-taskmaster (hunchentoot:one-thread-per-connection-taskmaster)
-  ())
-
-(defmethod hunchentoot:start-thread ((taskmaster prng-safe-taskmaster) thunk &key name)
-  (flet ((thunk ()
-           (let ((ironclad:*prng* (ironclad:make-prng :os)))
-             (funcall thunk))))
-    (bt:make-thread #'thunk :name name)))
-
 (defclass radiance-acceptor (hunchentoot:acceptor)
   ()
   (:default-initargs
    :access-log-destination NIL
-   :message-log-destination NIL
-   :taskmaster (make-instance 'prng-safe-taskmaster)))
+   :message-log-destination NIL))
 
 (defmethod hunchentoot:acceptor-dispatch-request ((acceptor radiance-acceptor) request)
   (multiple-value-bind (response request) (handle-hunchentoot-request request)
