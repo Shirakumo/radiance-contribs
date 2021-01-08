@@ -106,7 +106,8 @@
         (array (lquery:$ result (serialize) (node)))))))
 
 (define-page user-profile "user/([^/]+)?(/([^/]+))?" (:uri-groups (username NIL panel) :clip "public.ctml")
-  (let ((user (user:get username)))
+  (let ((user (when (and username (string/= "" username))
+                (user:get username))))
     (if user
         (r-clip:process
          T
