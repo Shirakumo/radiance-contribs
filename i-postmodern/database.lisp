@@ -62,7 +62,7 @@
             (name (string-downcase name)))
         (unless (valid-name-p name)
           (err "Invalid name, only a-z, - and _ are allowed."))
-        (ecase type
+        (case type
           (:ID
            (format NIL "~s INTEGER~@[ REFERENCES ~a(\"_id\")~]"
                    name (when arg (ensure-collection-name arg))))
@@ -85,7 +85,9 @@
            (format NIL "~s VARCHAR(~d)" name arg))
           (:TEXT
            (when arg (err "TEXT cannot accept an argument."))
-           (format NIL "~s TEXT" name)))))))
+           (format NIL "~s TEXT" name))
+	  (T
+	   (err "Unrecognized field type.")))))))
 
 (defun db:structure (collection)
   (with-connection

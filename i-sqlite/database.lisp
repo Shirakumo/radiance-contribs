@@ -76,7 +76,7 @@
            (when arg (err "BOOLEAN cannot accept an argument."))
            (format NIL "~s BOOLEAN" (string-downcase name)))
           (T
-           (error 'db:invalid-field :database *current-db* :field arg)))))))
+	   (err "Unrecognized field type.")))))))
 
 (defun db:structure (collection)
   (etypecase collection
