@@ -39,7 +39,7 @@
   (typecase thing
     (string
      (unless (valid-name-p thing)
-       (error 'db:invalid-collection :collection thing))
+       (error 'db:invalid-collection :database *db-name* :collection thing))
      (intern (map 'string (lambda (c) (if (char= c #\/)
                                           #+windows #\;
                                           #-windows #\:
@@ -137,13 +137,13 @@
                     (:id (typep (second type) '(or symbol string)))
                     (:integer (typep (second type) '(integer 1 8)))
                     (:varchar (typep (second type) '(integer 1))))))
-    (error 'db:invalid-field :field field)))
+    (error 'db:invalid-field :database *db-name* :field field)))
 
 (defun check-field-name (field)
   (unless (typecase field
             (string (valid-name-p field))
             (symbol (valid-name-p (string field))))
-    (error 'db:invalid-field :field field)))
+    (error 'db:invalid-field :database *db-name* :field field)))
 
 (defun db:create (collection structure &key indices (if-exists :ignore))
   (declare (ignore indices))
@@ -170,7 +170,7 @@
 
 (defun db:drop (collection)
   (unless (db:structure collection)
-    (error 'db:invalid-collection :collection collection))
+    (error 'db:invalid-collection :database *db-name* :collection collection))
   (let ((collection (ensure-collection collection)))
     (lambdalite:del :schemas (lambdalite:where (eql :/name collection)))
     (lambdalite::with-lock

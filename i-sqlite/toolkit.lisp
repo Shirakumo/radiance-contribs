@@ -29,7 +29,7 @@
                       (symbol (format NIL "~a/~a"
                                       (package-name (symbol-package name)) (symbol-name name))))))
     (unless (valid-name-p collection)
-      (error 'db:invalid-collection :collection collection :message "Invalid name, only a-z, - and _ are allowed."))
+      (error 'db:invalid-collection :database *current-db* :collection collection :message "Invalid name, only a-z, - and _ are allowed."))
     collection))
 
 (defun ensure-collection-name (name &optional check-exists)
@@ -38,5 +38,5 @@
       (let ((collection (coerce-collection-name name)))
         (when check-exists
           (when (= 0 (db:count "sqlite_master" (db:query (:and (:= 'type "table") (:= 'name collection)))))
-            (error 'db:invalid-collection :collection collection :message "Collection does not exist on database.")))
+            (error 'db:invalid-collection :database *current-db* :collection collection :message "Collection does not exist on database.")))
         (prin1-to-string collection))))

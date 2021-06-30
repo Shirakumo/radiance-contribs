@@ -51,7 +51,7 @@
         collection))))
 
 (defun compile-field (field)
-  (flet ((err (msg) (error 'db:invalid-field :field field :message msg)))
+  (flet ((err (msg) (error 'db:invalid-field :database *current-db* :field field :message msg)))
     (destructuring-bind (name type) field
       (unless (valid-name-p name)
         (err "Invalid name, only a-z, - and _ are allowed."))
@@ -76,7 +76,7 @@
            (when arg (err "BOOLEAN cannot accept an argument."))
            (format NIL "~s BOOLEAN" (string-downcase name)))
           (T
-           (error 'db:invalid-field :field arg)))))))
+           (error 'db:invalid-field :database *current-db* :field arg)))))))
 
 (defun db:structure (collection)
   (etypecase collection

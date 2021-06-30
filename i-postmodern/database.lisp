@@ -56,7 +56,7 @@
       T)))
 
 (defun compile-field (field)
-  (flet ((err (msg) (error 'db:invalid-field :field field :message msg)))
+  (flet ((err (msg) (error 'db:invalid-field :database *current-db* :field field :message msg)))
     (destructuring-bind (name type) field
       (let ((arg (when (listp type) (prog1 (second type) (setf type (first type)))))
             (name (string-downcase name)))
