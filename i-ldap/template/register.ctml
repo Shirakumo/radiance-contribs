@@ -26,7 +26,7 @@
                 </div>
                 <div class="row">
                   <label for="email">E-Mail</label>
-                  <input type="email" id="email" name="email" title="Please specify a valid e-mail address." placeholder="mr-happy@example.com" pattern=".{3,32}" required
+                  <input type="email" id="email" name="email" title="Please specify a valid e-mail address." placeholder="mr-happy@example.com" pattern=".{3,64}" required
                          lquery="(val (post-var :email))" />
                 </div>
                 <div class="row">

@@ -128,7 +128,7 @@
          ((:register
            (r-ratify:with-form
                (((:string 1 32) username)
-                ((:email 1 32) email)
+                ((:email 1 64) email)
                 ((:string 8 64) password repeat)
                 (:nonce firstname))
              (declare (ignore firstname))
