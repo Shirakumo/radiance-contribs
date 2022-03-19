@@ -111,6 +111,8 @@
     (db:with-transaction ()
       (db:remove 'fields (db:query (:= 'uid (id user))))
       (db:remove 'users (db:query (:= '_id (id user))))
+      (remhash (id user) *user-cache*)
+      (remhash (username user) *user-cache*)
       (trigger 'user:remove user)
       (setf (fields user) NIL
             (id user) NIL
