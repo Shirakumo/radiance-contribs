@@ -40,8 +40,8 @@
        (ensure-user b)))
 
 (defun user:list ()
-  (loop for user being the hash-values of *user-cache*
-        collect user))
+  (loop for user being the hash-values of *user-cache* using (hash-key key)
+	when (numberp key) collect user))
 
 (defun user:get (username/id &key (if-does-not-exist NIL))
   (let ((username (etypecase username/id
