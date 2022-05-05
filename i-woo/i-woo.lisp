@@ -244,7 +244,7 @@
                                (mapcar #'handle-var val)
                                (handle-var val))))
               (error (err)
-                (v:severe :server "Error in cleanup: ~a" err)))
+                (l:severe :server "Error in cleanup: ~a" err)))
             ;; Present output
             (transform-response request response)))
       (abort (err)
