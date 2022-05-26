@@ -10,5 +10,6 @@ This interface will not configure any defaults for you, as it has no way of gues
 :connections name :port     ; => The port of the database server. Defaults to 5432.
 :connections name :user     ; => The username to connect with.
 :connections name :pass     ; => The password for the connecting user.
+:connections name :ssl      ; => Whether to use SSL or not.
 :connections name :database ; => The name of the database to connect to.
 ```

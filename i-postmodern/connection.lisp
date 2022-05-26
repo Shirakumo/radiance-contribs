@@ -14,10 +14,10 @@
 (defvar *connection-pool* ())
 (defvar *current-con* NIL)
 
-(defun db::spawn-connection (host port user pass db)
+(defun db::spawn-connection (host port user pass db ssl)
   (bt:with-lock-held (*pool-lock*)
-    (l:debug :database "Spawning connection for ~a~:[~;:*~]@~a:~a/~a" host port user pass db)
-    (push (or (postmodern:connect db user pass host :port port)
+    (l:debug :database "Spawning connection for ~a~:[~;:*~]@~a:~a/~a~@[ (SSL)~]" host port user pass db ssl)
+    (push (or (postmodern:connect db user pass host :port port :use-ssl ssl)
               (error 'db:connection-failed :database *current-db*))
           *connection-pool*)))
 
@@ -70,10 +70,11 @@
               (port (or (gethash :port conn) 5432))
               (user (gethash :user conn))
               (pass (gethash :pass conn))
+              (ssl (gethash :ssl conn))
               (db (or (gethash :database conn) (err "No database configured!"))))
-          (l:info :database "Connecting ~a ~a~:[~;:*~]@~a:~a/~a"
-                  database-name user pass host port db)
-          (setf *current-setting* (list host port user pass db)
+          (l:info :database "Connecting ~a ~a~:[~;:*~]@~a:~a/~a~@[ (SSL)~]"
+                  database-name user pass host port db ssl)
+          (setf *current-setting* (list host port user pass db ssl)
                 *current-db* database-name)
           (dotimes (i db::*default-pool-size*)
             (sleep 0.5)
