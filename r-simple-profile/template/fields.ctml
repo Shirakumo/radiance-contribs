@@ -9,6 +9,7 @@
           <th>Name</th>
           <th>Type</th>
           <th>Default</th>
+          <th>Editable</th>
 	  <th>Actions</th>
         </tr>
       </thead>
@@ -19,6 +20,7 @@
             <th lquery="(text name)">NAME</th>
             <th lquery="(text type)">TYPE</th>
             <th lquery="(text default)">DEFAULT</th>
+            <th lquery="(text editable)">EDITABLE</th>
 	    <td>
               <form action="#" method="post">
 	        <input type="hidden" name="name" lquery="(val name)" />
@@ -51,6 +53,7 @@
             <option value="tel">Telephone Number</option>
           </select></td>
 	  <td><input type="text" name="default" form="addForm" placeholder="Default" style="width:100%" maxlength="128" /></td>
+	  <td><input type="checkbox" name="editable" form="addForm" value="1" /></td>
 	  <td><form action="#" method="post" id="addForm">
             <input type="hidden" name="form" value="themes" />
 	    <input type="submit" name="action" value="Add" />
