@@ -10,14 +10,14 @@
               <a lquery="(text value) (attr :href value)">VALUE</a>
             </c:then>
             <c:elseif test='(string-equal type "email")'>
-              <a lquery="(text (reverse value))">
-                VALUE
+              <a>
+                <c:splice lquery="(text (reverse value))"/>
                 <script>let node = document.currentScript.parentNode;node.innerText = node.innerText.split('').reverse().join('');node.setAttribute('href','mailto:'+node.innerText);</script>
               </a>
             </c:elseif>
             <c:else>
               <span lquery="(text value)">VALUE</span>
-            </c:elseif>
+            </c:else>
           </c:if>
       </li>
     </c:when>
