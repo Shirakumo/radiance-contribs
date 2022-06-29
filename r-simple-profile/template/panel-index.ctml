@@ -1,9 +1,11 @@
 <div id="userinfo">
   <header><h2>User Info</h2></header>
   <ul iterate="(profile:fields)">
-    <li>
-      <label lquery="(text name)">FIELD</label>
-      <span lquery="(text (or* (user:field name (** :user)) default))">VALUE</span>
-    </li>
+    <c:when test="(user:field name (** :user))">
+      <li>
+        <label lquery="(text name)">FIELD</label>
+        <span lquery="(text (or* (user:field name (** :user)) default))">VALUE</span>
+      </li>
+    </c:when>
   </ul>
 </div>
