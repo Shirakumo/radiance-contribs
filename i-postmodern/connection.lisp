@@ -17,7 +17,7 @@
 (defun db::spawn-connection (host port user pass db ssl)
   (bt:with-lock-held (*pool-lock*)
     (l:debug :database "Spawning connection for ~a~:[~;:*~]@~a:~a/~a~@[ (SSL)~]" host port user pass db ssl)
-    (push (or (postmodern:connect db user pass host :port port :use-ssl ssl)
+    (push (or (postmodern:connect db user pass host :port port :use-ssl (if ssl :yes :no))
               (error 'db:connection-failed :database *current-db*))
           *connection-pool*)))
 
