@@ -16,7 +16,7 @@
   (defaulted-config "Radiance" :display-name)
   (defaulted-config :utf-8 :external-format))
 
-(defun mail:send (to subject message)
+(defun mail:send (to subject message &key html)
   (trigger 'mail:send to subject message)
   (cl-smtp:send-email
    (config :host)
@@ -24,6 +24,7 @@
    to
    subject
    message
+   :html-message html
    :port (config :port)
    :ssl (config :ssl)
    :reply-to (config :reply-to)
