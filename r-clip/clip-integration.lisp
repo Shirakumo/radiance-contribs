@@ -91,6 +91,8 @@
     (plump:make-text-node node (ecase format
                                  (:year (local-time:format-timestring NIL stamp :format '(:year)
                                                                                 :timezone local-time:+utc-zone+))
+                                 (:date (local-time:format-timestring NIL stamp :format '((:year 4) "." (:month 2) "." (:day 2))
+                                                                                :timezone local-time:+utc-zone+))
                                  (:clock (format-clock-time stamp))
                                  (:human (format-human-date stamp))
                                  (:machine (format-machine-date stamp))
