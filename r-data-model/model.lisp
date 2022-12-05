@@ -19,6 +19,12 @@
   (print-unreadable-object (model stream :type NIL)
     (format stream "DATA-MODEL ~a:~a~@[ HULL~]" (collection model) (id model) (hull-p model))))
 
+(defmethod describe-object ((model data-model) stream)
+  (format stream "~a~%  [~s]~%~%Represents record ~a on ~a~%Holds the following fields:"
+          model (type-of model) (id model) (collection model))
+  (loop for k being the hash-keys of (field-table model) using (hash-value v)
+        do (format stream "~%  ~30a: ~s" k v)))
+
 (defun id (data-model)
   (gethash "_id" (field-table data-model)))
 
