@@ -58,10 +58,14 @@
                                                 (make-instance 'data-model :collection hull :field-table ta :inserted T)))
               :skip skip :amount 1 :sort sort))
 
-(defun hull (collection) ;; speed up test with extra interface func.
+(defun hull (collection &rest fields) ;; speed up test with extra interface func.
   (unless (db:collection-exists-p collection)
     (error 'db:invalid-collection :collection collection :message "Cannot create hull."))
-  (make-instance 'data-model :collection collection))
+  (let ((hull (make-instance 'data-model :collection collection)))
+    (loop with table = (field-table hull)
+          for (k v) on fields by #'cddr
+          do (setf (gethash (string-downcase k) table) v))
+    hull))
 
 (defun hull-p (data-model)
   (not (inserted data-model)))
