@@ -60,7 +60,7 @@
     (list
      (case (first form)
        (:= (format NIL "(~a) = (~a)" (compile-form (second form)) (compile-form (third form))))
-       (:!= (format NIL "(~a) != (~a)" (compile-form (second form)) (compile-form (third form))))
+       (:/= (format NIL "(~a) != (~a)" (compile-form (second form)) (compile-form (third form))))
        (:> (format NIL "(~a) > (~a)" (compile-form (second form)) (compile-form (third form))))
        (:< (format NIL "(~a) < (~a)" (compile-form (second form)) (compile-form (third form))))
        (:<= (format NIL "(~a) <= (~a)" (compile-form (second form)) (compile-form (third form))))
