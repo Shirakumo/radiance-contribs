@@ -63,7 +63,8 @@
   (defaulted-config (* 60 60 24 365 1)
                     :lifetime :auth)
   (apply #'user:add-default-permissions (config :permissions :default))
-  (start-prune-thread))
+  (unless (and *prune-thread* (bt:thread-alive-p *prune-thread*))
+    (start-prune-thread)))
 
 (define-trigger radiance:shutdown ()
   (stop-prune-thread))
