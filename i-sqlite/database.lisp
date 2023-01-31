@@ -167,7 +167,7 @@
     (let ((query (format NIL "INSERT INTO ~a (~~{~~s~~^, ~~}) VALUES (~~:*~~{~~*?~~^, ~~});" collection)))
       (macrolet ((looper (&rest iters)
                    `(loop ,@iters
-                          collect (case value ((T) 1) ((NIL) 0) (T value)) into values
+                          collect (case value ((T) 1) (T value)) into values
                           collect (string-downcase field) into fields
                           finally (exec-query (format NIL query fields) values))))
         (etypecase data
@@ -191,13 +191,12 @@
                              query skip amount sort) query vars)
       (macrolet ((looper (&rest iters)
                    `(loop ,@iters
-                          collect (case value ((T) 1) ((NIL) 0) (T value)) into values
+                          collect (case value ((T) 1) (T value)) into values
                           collect (string-downcase field) into fields
                           finally (exec-query (format NIL "~a);" (format NIL query fields)) (append values vars)))))
         (etypecase data
           (hash-table
-           (looper for field being the hash-keys of data
-                   for value being the hash-values of data))
+           (looper for field being the hash-keys of data using (hash-value value)))
           (list
            (looper for (field . value) in data))))
       T)))
