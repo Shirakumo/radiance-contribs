@@ -48,7 +48,10 @@
       (error 'db:invalid-collection :database *current-db*
                                     :collection collection
                                     :message "Invalid name, only a-z, - and _ are allowed."))
-    (setf string (prin1-to-string string))
+    (setf string (with-output-to-string (output)
+                   (write-char #\" output)
+                   (write-string string output)
+                   (write-char #\" output)))
     (when check-exists
       (call-with-connection
        (lambda ()

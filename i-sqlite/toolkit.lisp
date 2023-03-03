@@ -39,4 +39,7 @@
         (when check-exists
           (when (= 0 (db:count "sqlite_master" (db:query (:and (:= 'type "table") (:= 'name collection)))))
             (error 'db:invalid-collection :database *current-db* :collection collection :message "Collection does not exist on database.")))
-        (prin1-to-string collection))))
+        (with-output-to-string (stream)
+          (write-char #\" stream)
+          (write-string collection stream)
+          (write-char #\" stream)))))
