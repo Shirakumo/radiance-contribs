@@ -58,6 +58,7 @@
        (:MATCHES (format NIL "(~a) ~~ (~a)" (compile-form (second form)) (compile-form (third form))))
        (:MATCHES* (format NIL "(~a) ~~* (~a)" (compile-form (second form)) (compile-form (third form))))
        (:IN (format NIL "(~a) IN (~{~a~^, ~})" (compile-form (second form)) (mapcar #'compile-form (cddr form))))
+       (:ANY (format NIL "(~a) ~a ANY(~a)" (compile-form (second form)) (or (fourth form) :=) (compile-form (third form))))
        (:AND (format NIL "~{(~a)~^ AND ~}" (mapcar #'compile-form (rest form))))
        (:OR (format NIL "~{(~a)~^ OR ~}" (mapcar #'compile-form (rest form))))
        (:NOT (format NIL "NOT (~a)" (compile-form (second form))))
