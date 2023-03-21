@@ -18,21 +18,24 @@
                        (:editable (:integer 1)))
              :indices '(:name)))
 
-(defun normalize (user)
+(defun normalize (user &optional (errorp T))
   (etypecase user
     (user:user user)
     (null (user:get "anonymous"))
-    ((or string symbol integer) (user:get user :if-does-not-exist :error))))
+    ((or string symbol integer) (user:get user :if-does-not-exist (if errorp :error NIL)))))
 
 (defun profile:avatar (user size)
-  (let ((email (or (user:field "email" (normalize user)) "")))
+  (let* ((user (normalize user NIL))
+         (email (or (when user (user:field "email" user)) "")))
     (format NIL "//www.gravatar.com/avatar/~a?s=~d&d=blank"
             (cryptos:md5 (string-downcase email)) size)))
 
-(defun profile:name (user)
-  (let ((user (normalize user)))
-    (or* (user:field "displayname" user)
-         (user:username user))))
+(defun profile:name (user-ish)
+  (let ((user (normalize user-ish NIL)))
+    (if user
+        (or* (user:field "displayname" user)
+             (user:username user))
+        user-ish)))
 
 (defun profile:fields ()
   (loop for model in (dm:get 'fields (db:query :all))
