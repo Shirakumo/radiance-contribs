@@ -18,7 +18,4 @@
                :r-clip
                :r-ratify
                :trivial-ldap
-               :ironclad
-               :babel
-               :cl-base64
                :crypto-shortcuts))

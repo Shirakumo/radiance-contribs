@@ -87,70 +87,19 @@
           (otherwise auth:*login-timeout*)))
   (trigger 'auth:associate session))
 
-(defun cat-vec (&rest vecs)
-  (let ((arr (make-array (loop for v in vecs sum (length v))
-                         :element-type (array-element-type (first vecs)))))
-    (loop for i = 0 then (+ i (length v))
-          for v in vecs
-          do (replace arr v :start1 i))
-    arr))
-
-(defun encode-hash (digest salt hash)
-  (format NIL "{~@[S~*~]~a}~a" salt
-          (ecase digest
-            (:md5 "MD5")
-            (:sha1 "SHA")
-            (:sha256 "SHA256")
-            (:sha384 "SHA384")
-            (:sha512 "SHA512"))
-          (base64:usb8-array-to-base64-string
-           (if salt (cat-vec hash salt) hash))))
-
-(defun decode-hash (hash)
-  (let ((closing (position #\} hash)))
-    (if closing
-        (let ((digest (subseq hash 1 closing))
-              (hash (base64:base64-string-to-usb8-array
-                     (subseq hash (1+ closing)))))
-          (if (find digest '("SMD5" "SSHA" "SSHA256" "SSHA384" "SSHA512") :test #'string=)
-              (let* ((digest (subseq digest 1))
-                     (digest (if (string= "SHA" digest) :sha1 (find-symbol digest :KEYWORD))))
-                (values (subseq hash 0 (ironclad:digest-length digest))
-                        (subseq hash (ironclad:digest-length digest))
-                        digest))
-              (values hash
-                      NIL
-                      (if (string= "SHA" digest) :sha1 (find-symbol digest :KEYWORD)))))
-        (values hash NIL NIL))))
-
-(defun hash-password (password &key (salt (radiance:make-random-string 12))
-                                    (digest :sha1))
-  (let ((salt (etypecase salt
-                (null NIL)
-                (string (babel:string-to-octets salt))
-                ((simple-array (unsigned-byte 8)) salt)))
-        (pass (babel:string-to-octets password)))
-    (encode-hash digest salt
-                 (ironclad:digest-sequence digest (if salt (cat-vec pass salt) pass)))))
-
-(defun password-valid-p (hash password)
-  (multiple-value-bind (_ salt digest) (decode-hash hash)
-    (declare (ignore _))
-    (when (and salt digest)
-      (string= hash (hash-password password :salt salt :digest digest)))))
-
 (defun auth::set-password (user password)
   (with-ldap ()
     (let ((user (user::ensure user)))
       (ldap:modify user *ldap*
-                   `((ldap:replace :userpassword ,(hash-password password))))
+                   `((ldap:replace :userpassword ,(cryptos:to-base64 (cryptos:rfc-2307-hash password)))))
       user)))
 
 (defun auth::check-password (user password)
   (let* ((user (user::ensure user))
          (hash (first (ldap:attr-value user :userpassword))))
-    (unless (and hash (password-valid-p hash password))
-      (error 'auth::invalid-password))))
+    (if (and hash (cryptos:check-rfc-2307-hash password (cryptos:from-base64 hash)))
+        T
+        (error 'auth::invalid-password))))
 
 (defun auth::recovery-active-p (user &optional code)
   (let* ((user (user::ensure user))

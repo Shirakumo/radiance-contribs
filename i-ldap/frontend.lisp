@@ -38,7 +38,9 @@
     (session:start)
     (auth:associate user)
     (if (string= "true" (post/get "browser"))
-        (redirect-to-landing (if (admin:implementation) (resource :admin :page) #@"/"))
+        (redirect-to-landing (if (admin:implementation)
+                                 (resource :admin :page)
+                                 #@"auth/login"))
         (api-output "Login successful."))))
 
 (define-api auth/logout () ()
