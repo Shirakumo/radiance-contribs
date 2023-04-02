@@ -6,8 +6,9 @@
 
 (in-package #:modularize-user)
 (define-module i-verbose
-    (:use #:cl #:radiance)
-    (:implements #:logger))
+  (:use #:cl #:radiance)
+  (:local-nicknames (#:v #:org.shirakumo.verbose))
+  (:implements #:logger))
 (in-package #:i-verbose)
 
 (defun l:log (level category log-string &rest format-args)
