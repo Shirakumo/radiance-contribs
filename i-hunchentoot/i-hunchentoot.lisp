@@ -119,6 +119,8 @@
       (pathname (hunchentoot:handle-static-file (data response) (content-type response)))
       (string (data response))
       ((array (unsigned-byte 8)) (data response))
+      (stream (uiop:copy-stream-to-stream (data response) (hunchentoot:send-headers)))
+      (function (funcall (data response) (hunchentoot:send-headers)))
       (null "Something really bad is going on (empty request body after error handling)"))))
 
 (defun handle-hunchentoot-request (request)
