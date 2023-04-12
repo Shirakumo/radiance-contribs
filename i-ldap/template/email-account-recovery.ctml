@@ -1,0 +1,15 @@
+<title>Radiance account recovery request</title>
+<body>Hi, <c:s>username</c:s>
+
+  An account recovery was recently requested. If this was you, please
+  use the following link to recover your account. If you did not request
+  a recovery, you can simply ignore this email.
+
+  <c:s>recovery-url</c:s>
+
+  Note that the recovery link will expire after 24 hours and you will
+  not be sent a new mail before then.
+
+  ----------------------------------------------------------------------
+  This is an automated message. Please do not reply to it.
+</body>

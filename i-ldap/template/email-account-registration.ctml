@@ -1,0 +1,15 @@
+<title>Please confirm your email address for the Radiance account</title>
+<body>Hi, <c:s>username</c:s>
+
+  You recently registered an account. While your account is already
+  active, you have to confirm your email address by visiting the link
+  below.
+
+  <c:s>activation-url</c:s>
+
+  Note that the activation link will expire after 24 hours and your
+  account will automatically be deleted if the email is not confirmed.
+
+  ----------------------------------------------------------------------
+  This is an automated message. Please do not reply to it.
+</body>

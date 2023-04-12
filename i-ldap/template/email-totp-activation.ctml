@@ -1,0 +1,16 @@
+<title>2-Factor authentication has been enabled for your Radiance account</title>
+<body>Hi, <c:s>username</c:s>
+
+  Your account security was recently changed and 2-factor authentication
+  has been enabled. If this was you, then no need to worry. Please
+  make sure to keep your 2-factor application with you, as login won't
+  be possible without it anymore.
+
+  If you would like to disable 2-factor authentication at any point, you
+  can do so in your account settings.
+
+  <c:s>settings-url</c:s>
+
+  ----------------------------------------------------------------------
+  This is an automated message. Please do not reply to it.
+</body>

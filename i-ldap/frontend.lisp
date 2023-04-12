@@ -8,6 +8,15 @@
 
 (defvar *nonce-salt* (make-random-string))
 
+(defun send-email (user template &rest args)
+  (let* ((data (apply #'clip:process (plump:parse (@template template))
+                      :user user
+                      :username (user:username user)
+                      args)))
+    (mail:send (user:field "email" user)
+               (lquery:$1 data "title" (text))
+               (lquery:$1 data "body" (text)))))
+
 (define-resource-locator auth page (page &optional landing)
   (cond ((find page '("login" "logout" "register" "recover") :test #'string-equal)
          (values (make-uri :domains '("auth") :path page)
@@ -54,26 +63,35 @@
     (lambda (stream) (zpng:write-png-stream png stream))))
 
 (define-api auth/totp/update (action totp &optional totp-key) (:access (perm auth totp))
-  (cond ((string-equal "enable" action)
-         (unless (= (parse-integer totp) (auth::totp (auth:current) totp-key))
-           (error 'auth::invalid-password))
-         (auth::activate-totp (auth:current) totp-key))
-        ((string-equal "disable" action)
-         (unless (= (parse-integer totp) (auth::totp (auth:current)))
-           (error 'auth::invalid-password))
-         (setf (auth::totp-active-p (auth:current)) NIL))
-        (T (error 'api-error :message "Invalid action ~s" action)))
-  (if (string= "true" (post/get "browser"))
-      (multiple-value-bind (uri query fragment)
-          (resource :admin :page "settings" "password")
-        (redirect (uri-to-url uri
-                              :representation :external
-                              :query `(("info" . ,(if (string-equal "enable" action)
-                                                      "2-Factor authentication enabled"
-                                                      "2-Factor authentication disabled"))
-                                       ,@query)
-                              :fragment fragment)))
-      (api-output "Password changed.")))
+  (let ((user (auth:current)))
+    (cond ((string-equal "enable" action)
+           (unless (= (parse-integer totp) (auth::totp (auth:current) totp-key))
+             (error 'auth::invalid-password))
+           (auth::activate-totp (auth:current) totp-key)
+           (send-email user "email-totp-activation.ctml"
+                       :settings-url (multiple-value-bind (uri query fragment)
+                                         (resource :admin :page "settings" "password")
+                                       (uri-to-url uri :representation :external :query query :fragment fragment))))
+          ((string-equal "disable" action)
+           (unless (= (parse-integer totp) (auth::totp (auth:current)))
+             (error 'auth::invalid-password))
+           (setf (auth::totp-active-p (auth:current)) NIL)
+           (send-email user "email-totp-deactivation.ctml"
+                       :settings-url (multiple-value-bind (uri query fragment)
+                                         (resource :admin :page "settings" "password")
+                                       (uri-to-url uri :representation :external :query query :fragment fragment))))
+          (T (error 'api-error :message "Invalid action ~s" action)))
+    (if (string= "true" (post/get "browser"))
+        (multiple-value-bind (uri query fragment)
+            (resource :admin :page "settings" "password")
+          (redirect (uri-to-url uri
+                                :representation :external
+                                :query `(("info" . ,(if (string-equal "enable" action)
+                                                        "2-Factor authentication enabled"
+                                                        "2-Factor authentication disabled"))
+                                         ,@query)
+                                :fragment fragment)))
+        (api-output "Password changed."))))
 
 (define-api auth/login (username password) ()
   (when (auth:current) (error 'api-error :message "You are already logged in."))
@@ -107,6 +125,8 @@
       (error 'api-error "The confirmation does not match the password."))
     (auth::check-password user old-password)
     (auth::set-password user new-password)
+    (send-email user "email-password-change.ctml"
+                :recovery-url (uri-to-url #@"auth/recover" :representation :external))
     (if (string= "true" (post/get "browser"))
         (multiple-value-bind (uri query fragment)
             (resource :admin :page "settings" "password")
@@ -125,14 +145,12 @@
     (when (auth::recovery-active-p user)
       (error 'api-error :message "A recovery email has already been sent."))
     (let ((code (auth::create-recovery user)))
-      (mail:send (user:field "email" user)
-                 (config :account :recovery :subject)
-                 (format NIL (config :account :recovery :message)
-                         username (uri-to-url "/api/auth/recover"
-                                              :representation :external
-                                              :query `(("browser" . "true")
-                                                       ("username" . ,username)
-                                                       ("code" . ,code)))))
+      (send-email user "email-account-recovery.ctml"
+                  :recovery-url (uri-to-url "/api/auth/recover"
+                                            :representation :external
+                                            :query `(("browser" . "true")
+                                                     ("username" . ,username)
+                                                     ("code" . ,code))))
       (if (string= "true" (post/get "browser"))
           (redirect (uri-to-url #@"auth/recover"
                                 :representation :external
@@ -161,6 +179,24 @@
                            :representation :external
                            :query `(("password" . ,new-pw)))))
           (api-output new-pw)))))
+
+(define-api auth/activate (username code) ()
+  (let ((user (user:get username)))
+    (unless user
+      (error 'api-error :message "Invalid username or code."))
+    (auth::activate user code)
+    (if (string= "true" (post/get "browser"))
+        (redirect
+         (if (admin:implementation)
+             (multiple-value-bind (uri query fragment)
+                 (resource :admin :page "settings" "password")
+               (uri-to-url uri
+                           :representation :external
+                           :query `(("info" . "Your account has been activated.")
+                                    ,@query)
+                           :fragment fragment))
+             (uri-to-url "/" :representation :external)))
+        (api-output "Account activated"))))
 
 (define-page login "auth/login" (:clip "login.ctml")
   (maybe-save-landing)

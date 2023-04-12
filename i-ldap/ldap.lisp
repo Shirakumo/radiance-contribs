@@ -61,6 +61,13 @@
   ()
   (:default-initargs :message "Invalid username or password."))
 
+(defun activation-code (timeout)
+  (format NIL "~a~36r" (make-random-string 32) (+ (get-universal-time) timeout)))
+
+(defun activation-code-valid-p (code &optional user-code)
+  (and (< (get-universal-time) (parse-integer (subseq code 32) :radix 36))
+       (or (null user-code) (string= code user-code))))
+
 (defclass user (user:user ldap:entry)
   ())
 
@@ -101,22 +108,26 @@
         T
         (error 'auth::invalid-password))))
 
-(defun auth::recovery-active-p (user &optional code)
+(defun auth::account-active-p (user &optional user-code)
   (let* ((user (user::ensure user))
-         (recovery (first (ldap:attr-value user :accountrecovery))))
-    (and recovery
-         (< (get-universal-time)
-            (parse-integer (subseq recovery 32) :radix 36))
-         (or (null code)
-             (string= code recovery)))))
+         (code (first (ldap:attr-value user :accountactivation))))
+    (or (null code) (activation-code-valid-p code user-code))))
+
+(defun auth::activate (user code)
+  (with-ldap ()
+    (let ((user (user::ensure user)))
+      (unless (auth::account-active-p user code)
+        (error 'api-error :message "Invalid username or code."))
+      (ldap:modify user *ldap* `((ldap:delete :accountactivation ,code)))
+      user)))
+
+(defun auth::recovery-active-p (user &optional user-code)
+  (activation-code-valid-p (first (ldap:attr-value (user::ensure user) :accountrecovery)) user-code))
 
 (defun auth::create-recovery (user)
   (with-ldap ()
     (let ((user (user::ensure user))
-          (recovery (format NIL "~a~36r"
-                            (make-random-string 32)
-                            (+ (get-universal-time)
-                               (config :account :recovery :timeout)))))
+          (recovery (activation-code (config :account :recovery :timeout))))
       (ldap:modify user *ldap* `((ldap:replace :accountrecovery ,recovery)))
       recovery)))
 
@@ -208,9 +219,10 @@
         (push (change-class entry 'user) users)))
     users))
 
-(defun user::create (username &key (if-exists :error) (email ""))
+(defun user::create (username &key (if-exists :error) (email "") activate)
   (with-ldap ()
-    (let ((user (user:get username)))
+    (let ((user (user:get username))
+          (code (activation-code (config :account :activation :timeout))))
       (when user
         (ecase if-exists
           (:supersede (user::remove user))
@@ -225,12 +237,22 @@
                                             (:mail . ,email)
                                             (:accountid . ,(princ-to-string (get-next-id)))
                                             (:accountname . ,username)
+                                            ,@(unless activate
+                                                `((:accountactivation . ,code)))
                                             ,@(when (user::default-perms)
                                                 `((:accountpermission ,@(user::default-perms)))))
                                    :infer-rdn NIL)))
         (ldap:add entry *ldap*)
         (let ((user (change-class entry 'user)))
+          (setf (user:field user "registration-date") (get-universal-time))
           (trigger 'user:create user)
+          (when (and (null activate) (mail:implementation))
+            (send-email user "email-account-registration.ctml"
+                        :activation-url (uri-to-url "/api/auth/activate"
+                                                    :representation :external
+                                                    :query `(("browser" . "true")
+                                                             ("username" . ,username)
+                                                             ("code" . ,code)))))
           user)))))
 
 (defun user:get (username/id &key (if-does-not-exist NIL))
@@ -396,22 +418,11 @@
   (defaulted-config "inetOrgPerson" :account :object-class)
   (defaulted-config :closed :account :registration)
   (defaulted-config (* 24 60 60) :account :recovery :timeout)
+  (defaulted-config (* 24 60 60) :account :activation :timeout)
   (defaulted-config :sha1 :account :totp :digest)
   (defaulted-config 6 :account :totp :digits)
   (defaulted-config 30 :account :totp :period)
   (defaulted-config "radiance" :account :totp :issuer)
-  (defaulted-config "Radiance Account Recovery" :account :recovery :subject)
-  (defaulted-config "Hi, ~a.
-
-An account recovery was recently requested. If this was you, please
-use the following link to recover your account. If you did not request
-a recovery, you can simply ignore this email.
-
-    ~a
-
-Note that the recovery link will expire after 24 hours and you will
-not be sent a new mail before then."
-                    :account :recovery :message)
   (dotimes (i (defaulted-config 5 :ldap :connections))
     (let ((ldap (ldap:new-ldap :host (config :ldap :host)
                                :port (config :ldap :port)

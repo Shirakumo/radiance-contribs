@@ -1,0 +1,15 @@
+<title>2-Factor authentication has been disabled for your Radiance account</title>
+<body>Hi, <c:s>username</c:s>
+
+  Your account security was recently changed and 2-factor authentication
+  has been disabled. If this was you, then no need to worry. You can
+  now log in again without the 2-factor authentication.
+
+  If you would like to re-enable 2-factor authentication at any point,
+  you can do so in your account settings.
+
+  <c:s>settings-url</c:s>
+
+  ----------------------------------------------------------------------
+  This is an automated message. Please do not reply to it.
+</body>
