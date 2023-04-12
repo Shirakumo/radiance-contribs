@@ -144,7 +144,7 @@
 (defun auth::totp-uri (user &optional otp-key)
   (cryptos:totp-uri (user:username user)
                     :secret (cryptos:from-base32
-                             (or otp-key (first (ldap:attr-value (user::ensure user) :totpkey)))
+                             (or otp-key (first (ldap:attr-value (user::ensure user) :accounttotpkey)))
                              :octets)
                     :issuer (config :account :totp :issuer)
                     :digest (config :account :totp :digest)
@@ -154,7 +154,7 @@
 (defun auth::totp (user &optional otp-key)
   (cryptos:totp (cryptos:from-base32
                  (or otp-key
-                     (or (first (ldap:attr-value (user::ensure user) :totpkey))
+                     (or (first (ldap:attr-value (user::ensure user) :accounttotpkey))
                          (error 'api-error :message "Invalid username or code.")))
                  :octets) 
                 :digest (config :account :totp :digest)
@@ -162,24 +162,24 @@
                 :digits (config :account :totp :digits)))
 
 (defun auth::totp-active-p (user)
-  (first (ldap:attr-value (user::ensure user) :totpkey)))
+  (first (ldap:attr-value (user::ensure user) :accounttotpkey)))
 
 (defun (setf auth::totp-active-p) (value user)
   (if value
       (auth::activate-totp user)
       (with-ldap ()
         (let* ((user (user::ensure user))
-               (key (first (ldap:attr-value user :totpkey))))
+               (key (first (ldap:attr-value user :accounttotpkey))))
           (when key
-            (ldap:modify user *ldap* `((ldap:delete :totpkey ,key)))
+            (ldap:modify user *ldap* `((ldap:delete :accounttotpkey ,key)))
             NIL)))))
 
 (defun auth::activate-totp (user &optional otp-key)
   (with-ldap ()
     (let ((user (user::ensure user)))
-      (or (first (ldap:attr-value user :totpkey))
+      (or (first (ldap:attr-value user :accounttotpkey))
           (let ((key (or otp-key (cryptos:to-base32 (cryptos:make-salt 10)))))
-            (ldap:modify user *ldap* `((ldap:replace :totpkey ,key)))
+            (ldap:modify user *ldap* `((ldap:replace :accounttotpkey ,key)))
             key)))))
 
 (defun get-next-id ()
@@ -246,7 +246,7 @@
         (let ((user (change-class entry 'user)))
           (setf (user:field user "registration-date") (get-universal-time))
           (trigger 'user:create user)
-          (when (and (null activate) (mail:implementation))
+          (when (null activate)
             (send-email user "email-account-registration.ctml"
                         :activation-url (uri-to-url "/api/auth/activate"
                                                     :representation :external
@@ -445,7 +445,7 @@
     (user::create "anonymous" :if-exists NIL))
   ;; Set this after the anonymous user creation to ensure it does not
   ;; get the password change permission.
-  (defaulted-config (list "auth.change-password.") :account :default-perms)
+  (defaulted-config (list "auth.change-password." "auth.totp.") :account :default-perms)
   (trigger 'user:ready))
 
 (define-trigger server-stop ()

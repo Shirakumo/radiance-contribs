@@ -36,6 +36,22 @@ olcAttributeTypes: ( 1.3.6.1.4.1.51977.0.1.4 NAME 'accountRecovery'
  SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 
  SINGLE-VALUE 
  USAGE userApplications ) 
+olcAttributeTypes: ( 1.3.6.1.4.1.51977.0.1.5 NAME 'accountActivation'
+ DESC 'Field for the activation code when an account has been registered.' 
+ EQUALITY caseExactMatch 
+ ORDERING caseExactOrderingMatch 
+ SUBSTR caseExactSubstringsMatch 
+ SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 
+ SINGLE-VALUE 
+ USAGE userApplications ) 
+olcAttributeTypes: ( 1.3.6.1.4.1.51977.0.1.6 NAME 'accountTOTPKey'
+ DESC 'Field for the account's TOTP secret key.' 
+ EQUALITY caseExactMatch 
+ ORDERING caseExactOrderingMatch 
+ SUBSTR caseExactSubstringsMatch 
+ SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 
+ SINGLE-VALUE 
+ USAGE userApplications )
 olcObjectClasses: ( 1.3.6.1.4.1.51977.0.2.0 NAME 'radianceNextID'
  DESC 'Counter object for the next accountID' 
  STRUCTURAL 

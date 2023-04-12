@@ -9,13 +9,14 @@
 (defvar *nonce-salt* (make-random-string))
 
 (defun send-email (user template &rest args)
-  (let* ((data (apply #'clip:process (plump:parse (@template template))
-                      :user user
-                      :username (user:username user)
-                      args)))
-    (mail:send (user:field "email" user)
-               (lquery:$1 data "title" (text))
-               (lquery:$1 data "body" (text)))))
+  (when (mail:implementation)
+    (let* ((data (apply #'clip:process (plump:parse (@template template))
+                        :user user
+                        :username (user:username user)
+                        args)))
+      (mail:send (user:field "email" user)
+                 (lquery:$1 data "title" (text))
+                 (lquery:$1 data "body" (text))))))
 
 (define-resource-locator auth page (page &optional landing)
   (cond ((find page '("login" "logout" "register" "recover") :test #'string-equal)
