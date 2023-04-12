@@ -66,4 +66,12 @@
      :background (hex 0088EE)
      :font-weight bold
      :width 100%
-     :border none)))))
+     :border none)
+    (input[name=totp]
+     :font-family monospace
+     :border none
+     :letter-spacing 0.2em
+     :font-size 2em
+     :width 100%
+     :text-align center)))))
+

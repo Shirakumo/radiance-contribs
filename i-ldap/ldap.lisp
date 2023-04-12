@@ -73,7 +73,7 @@
                   (progn (trigger 'auth:no-associated-user)
                          (session:field session 'user)))))
     (if user
-        (user:get user)
+        (user::ensure user)
         (and default (user:get default :if-does-not-exist :error)))))
 
 (defun auth:associate (user &optional (session (session:get)))
@@ -129,6 +129,47 @@
       (ldap:modify user *ldap* `((ldap:delete :accountrecovery ,code)))
       (auth::set-password user new)
       new)))
+
+(defun auth::totp-uri (user &optional otp-key)
+  (cryptos:totp-uri (user:username user)
+                    :secret (cryptos:from-base32
+                             (or otp-key (first (ldap:attr-value (user::ensure user) :totpkey)))
+                             :octets)
+                    :issuer (config :account :totp :issuer)
+                    :digest (config :account :totp :digest)
+                    :period (config :account :totp :period)
+                    :digits (config :account :totp :digits)))
+
+(defun auth::totp (user &optional otp-key)
+  (cryptos:totp (cryptos:from-base32
+                 (or otp-key
+                     (or (first (ldap:attr-value (user::ensure user) :totpkey))
+                         (error 'api-error :message "Invalid username or code.")))
+                 :octets) 
+                :digest (config :account :totp :digest)
+                :period (config :account :totp :period)
+                :digits (config :account :totp :digits)))
+
+(defun auth::totp-active-p (user)
+  (first (ldap:attr-value (user::ensure user) :totpkey)))
+
+(defun (setf auth::totp-active-p) (value user)
+  (if value
+      (auth::activate-totp user)
+      (with-ldap ()
+        (let* ((user (user::ensure user))
+               (key (first (ldap:attr-value user :totpkey))))
+          (when key
+            (ldap:modify user *ldap* `((ldap:delete :totpkey ,key)))
+            NIL)))))
+
+(defun auth::activate-totp (user &optional otp-key)
+  (with-ldap ()
+    (let ((user (user::ensure user)))
+      (or (first (ldap:attr-value user :totpkey))
+          (let ((key (or otp-key (cryptos:to-base32 (cryptos:make-salt 10)))))
+            (ldap:modify user *ldap* `((ldap:replace :totpkey ,key)))
+            key)))))
 
 (defun get-next-id ()
   (with-ldap ()
@@ -355,6 +396,10 @@
   (defaulted-config "inetOrgPerson" :account :object-class)
   (defaulted-config :closed :account :registration)
   (defaulted-config (* 24 60 60) :account :recovery :timeout)
+  (defaulted-config :sha1 :account :totp :digest)
+  (defaulted-config 6 :account :totp :digits)
+  (defaulted-config 30 :account :totp :period)
+  (defaulted-config "radiance" :account :totp :issuer)
   (defaulted-config "Radiance Account Recovery" :account :recovery :subject)
   (defaulted-config "Hi, ~a.
 

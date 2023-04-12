@@ -18,4 +18,5 @@
                :r-clip
                :r-ratify
                :trivial-ldap
-               :crypto-shortcuts))
+               :crypto-shortcuts
+               :lispqr))

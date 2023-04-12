@@ -19,4 +19,71 @@
       <input type="submit" name="action" value="Save" />
     </div>
   </form>
+  <h2>2-Factor</h2>
+  <form class="box totp" @action="/api/auth/totp/update" method="post" autofill="off">
+    <input type="hidden" name="browser" value="true" />
+    <c:if test='(auth::totp-active-p (auth:current))'>
+      <c:then>
+        <p>2-Factor authentication is active. If you would like to disable it, please enter the current code frome the authenticator here:</p>
+        <input type="text" id="totp" name="totp" pattern="[0-9]*" required
+               lquery='(attr :placeholder totp-placeholder :minlength totp-digits :maxlength totp-digits)' />
+        <div class="actionbar">
+          <input type="hidden" name="browser" value="true" />
+          <input type="submit" name="action" value="Disable" />
+        </div>
+      </c:then>
+      <c:else>
+        <p>2-Factor authentication is not active. If you would like to enable it, please scan the following code with your authenticator app, and enter the current code frome the authenticator.</p>
+        <label class="totp-key" for="totp">
+          <img @src="/api/auth/totp/qr?totp-key={0} totp-key" class="totp-qr" />
+          <span lquery="(text totp-key)"></span>
+        </label>
+        <input type="text" id="totp" name="totp" pattern="[0-9]*" required
+               lquery='(attr :placeholder totp-placeholder :minlength totp-digits :maxlength totp-digits)' />
+        <input type="hidden" name="totp-key" lquery="(val totp-key)" />
+        <div class="actionbar">
+          <input type="hidden" name="browser" value="true" />
+          <input type="submit" name="action" value="Enable" />
+        </div>
+      </c:else>
+    </c:if>
+  </form>
+  <style>
+    .totp .totp-key{
+        display: block !important;
+        margin: 0 auto;
+        padding: 1em;
+        background: #E5E5E5;
+        border-radius: 0.5em;
+        width: 15em;
+    }
+    .totp .totp-key img{
+        display: block;
+        width: 100%;
+        margin-bottom: 1em;
+        object-fit: contain;
+        object-position: center;
+        image-rendering: pixelated;
+        box-shadow: 0 0 0.5em 0.1em white;
+    }
+    .totp .totp-key span{
+        display: block;
+        font-family: monospace;
+        text-align: center;
+        text-transform: uppercase;
+        font-size: 1.2em;
+        word-break: break-all;
+        color: #505050;
+    }
+    .totp input[name=totp]{
+        font-family: monospace;
+        letter-spacing: 0.2em;
+        font-size: 2em;
+        text-align: center;
+        margin: 1em auto !important;
+        display: block;
+        width: 10em;
+        border: none !important;
+    }
+  </style>
 </div>

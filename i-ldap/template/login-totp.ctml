@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8"/>
+    <title>2-Factor Challenge</title>
+    <link rel="stylesheet" type="text/css" @href="/static/i-ldap/auth.css" />
+  </head>
+  <body>
+    <header>
+      <h1>2-Factor Challenge</h1>
+    </header>
+    <c:when test="(post/get :error)"><div class="msg" lquery="(text (post/get :error))" /></c:when>
+    <main>
+      <form @action="/api/auth/totp/login" method="post">
+        <p>
+          Enter the code from your 2-factor authenticator here:
+        </p>
+        <input type="text" id="totp" name="totp" pattern="[0-9]*" required
+               lquery='(attr :placeholder totp-placeholder :minlength totp-digits :maxlength totp-digits)' />
+        <input type="hidden" name="browser" value="true" />
+        <input type="submit" class="button" value="Submit" />
+      </form>
+    </main>
+  </body>
+</html>
