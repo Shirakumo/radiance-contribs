@@ -79,8 +79,14 @@
   (let ((user (or (session:field session 'user)
                   (progn (trigger 'auth:no-associated-user)
                          (session:field session 'user)))))
-    (if user
-        (user::ensure user)
+    (or (when user
+          (let ((user (user::ensure user)))
+            (cond ((auth::account-active-p user)
+                   user)
+                  (T
+                   (l:info :radiance.ldap "Deleting user ~a as the account has expired" user)
+                   #++(user:remove user)
+                   NIL))))
         (and default (user:get default :if-does-not-exist :error)))))
 
 (defun auth:associate (user &optional (session (session:get)))
@@ -257,13 +263,19 @@
 
 (defun user:get (username/id &key (if-does-not-exist NIL))
   (with-ldap ()
-    (if (ldap:search *ldap* (etypecase username/id
-                              (string `(and (= objectclass "radianceAccount")
-                                            (= accountname ,username/id)))
-                              (integer `(and (= objectclass "radianceAccount")
-                                             (= accountid ,(princ-to-string username/id)))))
-                     :size-limit 1)
-        (change-class (ldap:next-search-result *ldap*) 'user)
+    (or (when (ldap:search *ldap* (etypecase username/id
+                                    (string `(and (= objectclass "radianceAccount")
+                                                  (= accountname ,username/id)))
+                                    (integer `(and (= objectclass "radianceAccount")
+                                                   (= accountid ,(princ-to-string username/id)))))
+                           :size-limit 1)
+          (let ((user (change-class (ldap:next-search-result *ldap*) 'user)))
+            (cond ((auth::account-active-p user)
+                   user)
+                  (T
+                   (l:info :radiance.ldap "Deleting user ~a as the account has expired" user)
+                   #++(user:remove user)
+                   NIL))))
         (ecase if-does-not-exist
           (:create (etypecase username/id
                      (string (user::create username/id))
