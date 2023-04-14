@@ -185,7 +185,7 @@
   (let ((user (user:get username)))
     (unless user
       (error 'api-error :message "Invalid username or code."))
-    (auth::activate user code)
+    (user::activate user code)
     (if (string= "true" (post/get "browser"))
         (redirect
          (if (admin:implementation)

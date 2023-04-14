@@ -81,7 +81,7 @@
                          (session:field session 'user)))))
     (or (when user
           (let ((user (user::ensure user)))
-            (cond ((auth::account-active-p user)
+            (cond ((user::account-active-p user)
                    user)
                   (T
                    (l:info :radiance.ldap "Deleting user ~a as the account has expired" user)
@@ -113,19 +113,6 @@
     (if (and hash (cryptos:check-rfc-2307-hash password (cryptos:from-base64 hash)))
         T
         (error 'auth::invalid-password))))
-
-(defun auth::account-active-p (user &optional user-code)
-  (let* ((user (user::ensure user))
-         (code (first (ldap:attr-value user :accountactivation))))
-    (or (null code) (activation-code-valid-p code user-code))))
-
-(defun auth::activate (user code)
-  (with-ldap ()
-    (let ((user (user::ensure user)))
-      (unless (auth::account-active-p user code)
-        (error 'api-error :message "Invalid username or code."))
-      (ldap:modify user *ldap* `((ldap:delete :accountactivation ,code)))
-      user)))
 
 (defun auth::recovery-active-p (user &optional user-code)
   (activation-code-valid-p (first (ldap:attr-value (user::ensure user) :accountrecovery)) user-code))
@@ -211,7 +198,31 @@
 (defun user::ensure (thing)
   (etypecase thing
     (user:user thing)
-    (T (user:get thing :if-does-not-exist :error))))
+    (T (user:get thing :if-does-not-exist :error :allow-inactive T))))
+
+(defun user::account-active-p (user &optional user-code)
+  (let* ((user (user::ensure user))
+         (code (first (ldap:attr-value user :accountactivation))))
+    (or (null code) (activation-code-valid-p code user-code))))
+
+(defun (setf user::account-active-p) (value user)
+  (with-ldap ()
+    (let* ((user (user::ensure user))
+           (code (first (ldap:attr-value user :accountactivation))))
+      (if (or (null code) (activation-code-valid-p code))
+          (unless value
+            (ldap:modify user *ldap* `((ldap:replace :accountactivation ,(activation-code -1)))))
+          (when value
+            (ldap:modify user *ldap* `((ldap:delete :accountactivation ,code)))))
+      value)))
+
+(defun user::activate (user code)
+  (with-ldap ()
+    (let ((user (user::ensure user)))
+      (unless (user::account-active-p user code)
+        (error 'api-error :message "Invalid username or code."))
+      (ldap:modify user *ldap* `((ldap:delete :accountactivation ,code)))
+      user)))
 
 (defun user:= (a b)
   (string= (user:username a)
@@ -261,7 +272,7 @@
                                                              ("code" . ,code)))))
           user)))))
 
-(defun user:get (username/id &key (if-does-not-exist NIL))
+(defun user:get (username/id &key (if-does-not-exist NIL) allow-inactive)
   (with-ldap ()
     (or (when (ldap:search *ldap* (etypecase username/id
                                     (string `(and (= objectclass "radianceAccount")
@@ -270,11 +281,11 @@
                                                    (= accountid ,(princ-to-string username/id)))))
                            :size-limit 1)
           (let ((user (change-class (ldap:next-search-result *ldap*) 'user)))
-            (cond ((auth::account-active-p user)
+            (cond ((or (user::account-active-p user) allow-inactive)
                    user)
                   (T
                    (l:info :radiance.ldap "Deleting user ~a as the account has expired" user)
-                   #++(user:remove user)
+                   (user:remove user)
                    NIL))))
         (ecase if-does-not-exist
           (:create (etypecase username/id
