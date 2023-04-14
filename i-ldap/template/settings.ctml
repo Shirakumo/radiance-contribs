@@ -35,7 +35,7 @@
       <c:else>
         <p>2-Factor authentication is not active. If you would like to enable it, please scan the following code with your authenticator app, and enter the current code frome the authenticator.</p>
         <label class="totp-key" for="totp">
-          <img @src="/api/auth/totp/qr?totp-key={0} totp-key" class="totp-qr" />
+          <img @src="admin/api/auth/totp/qr?totp-key={0} totp-key" class="totp-qr" />
           <span lquery="(text totp-key)"></span>
         </label>
         <input type="text" id="totp" name="totp" pattern="[0-9]*" required
