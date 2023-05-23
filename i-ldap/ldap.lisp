@@ -261,7 +261,7 @@
                                    :infer-rdn NIL)))
         (ldap:add entry *ldap*)
         (let ((user (change-class entry 'user)))
-          (setf (user:field user "registration-date") (get-universal-time))
+          (setf (user:field "registration-date" user) (princ-to-string (get-universal-time)))
           (trigger 'user:create user)
           (when (null activate)
             (send-email user "email-account-registration.ctml"
