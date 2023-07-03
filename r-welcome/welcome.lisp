@@ -1,9 +1,3 @@
-#|
- This file is a part of TyNETv5/Radiance
- (c) 2016 Shirakumo http://tymoon.eu (shinmera@tymoon.eu)
- Author: Nicolas Hafner <shinmera@tymoon.eu>
-|#
-
 (in-package #:modularize-user)
 (define-module #:welcome
     (:use #:cl #:radiance))
