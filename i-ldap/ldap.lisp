@@ -101,12 +101,12 @@
                    `((ldap:replace :userpassword ,(cryptos:to-base64 (cryptos:rfc-2307-hash password)))))
       user)))
 
-(defun auth::check-password (user password)
+(defun auth::check-password (user password &optional (errorp T))
   (let* ((user (user::ensure user))
          (hash (first (ldap:attr-value user :userpassword))))
     (if (and hash (cryptos:check-rfc-2307-hash password (cryptos:from-base64 hash)))
         T
-        (error 'auth::invalid-password))))
+        (when errorp (error 'auth::invalid-password)))))
 
 (defun auth::recovery-active-p (user &optional user-code)
   (activation-code-valid-p (first (ldap:attr-value (user::ensure user) :accountrecovery)) user-code))
@@ -118,15 +118,16 @@
       (ldap:modify user *ldap* `((ldap:replace :accountrecovery ,recovery)))
       recovery)))
 
-(defun auth::recover (user code)
+(defun auth::recover (user code &optional errorp)
   (with-ldap ()
     (let ((user (user::ensure user))
           (new (make-random-string)))
-      (unless (auth::recovery-active-p user code)
-        (error 'api-error :message "Invalid username or code."))
-      (ldap:modify user *ldap* `((ldap:delete :accountrecovery ,code)))
-      (auth::set-password user new)
-      new)))
+      (cond ((auth::recovery-active-p user code)
+             (ldap:modify user *ldap* `((ldap:delete :accountrecovery ,code)))
+             (auth::set-password user new)
+             new)
+            (errorp
+             (error 'api-error :message "Invalid username or code."))))))
 
 (defun auth::totp-uri (user &optional otp-key)
   (cryptos:totp-uri (user:username user)
@@ -210,13 +211,14 @@
             (ldap:modify user *ldap* `((ldap:delete :accountactivation ,code)))))
       value)))
 
-(defun user::activate (user code)
+(defun user::activate (user code &optional errorp)
   (with-ldap ()
     (let ((user (user::ensure user)))
-      (unless (user::account-active-p user code)
-        (error 'api-error :message "Invalid username or code."))
-      (ldap:modify user *ldap* `((ldap:delete :accountactivation ,code)))
-      user)))
+      (cond ((user::account-active-p user code)
+             (ldap:modify user *ldap* `((ldap:delete :accountactivation ,code)))
+             user)
+            (errorp
+             (error 'api-error :message "Invalid username or code."))))))
 
 (defun user:= (a b)
   (string= (user:username a)

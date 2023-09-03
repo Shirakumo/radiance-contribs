@@ -35,10 +35,19 @@
     (when landing (setf (session:field 'landing-page) landing))))
 
 (define-api auth/totp/login (totp) ()
-  (when (auth:current) (error 'api-error :message "You are already logged in."))
-  (let* ((user (or (session:field 'totp-user) (error 'auth::invalid-password))))
-    (unless (= (parse-integer totp) (auth::totp user))
+  (when (auth:current)
+    (error 'api-error :message "You are already logged in."))
+  (let ((user (session:field 'totp-user)))
+    (unless user
+      (l:warn :radiance.ldap "(~a) TOTP login attempt failed: no user in session"
+              (remote *request*) (user:username user))
       (error 'auth::invalid-password))
+    (unless (= (parse-integer totp) (auth::totp user))
+      (l:warn :radiance.ldap "(~a) TOTP login attempt for ~s failed: TOTP was ~6,'0d but expected ~6,'0d"
+              (remote *request*) (user:username user) (parse-integer totp) (auth::totp user))
+      (error 'auth::invalid-password))
+    (l:info :radiance.ldap "(~a) TOTP Login attempt for user account ~s succeeded."
+            (remote *request*) (user:username user))
     (auth:associate user)
     (if (string= "true" (post/get "browser"))
         (redirect-to-landing (if (admin:implementation)
@@ -60,16 +69,24 @@
 (define-api auth/totp/update (action totp &optional totp-key) (:access (perm auth totp))
   (let ((user (auth:current)))
     (cond ((string-equal "enable" action)
-           (unless (= (parse-integer totp) (auth::totp (auth:current) totp-key))
+           (unless (= (parse-integer totp) (auth::totp user totp-key))
+             (l:warn :radiance.ldap "(~a) TOTP enable for ~s failed: TOTP was ~6,'0d but expected ~6,'0d"
+                     (remote *request*) (user:username user) (parse-integer totp) (auth::totp user totp-key))
              (error 'auth::invalid-password))
+           (l:info :radiance.ldap "(~a) Requesting TOTP enable for ~s"
+                   (remote *request*) (user:username user))
            (auth::activate-totp (auth:current) totp-key)
            (send-email user "email-totp-activation.ctml"
                        :settings-url (multiple-value-bind (uri query fragment)
                                          (resource :admin :page "settings" "password")
                                        (uri-to-url uri :representation :external :query query :fragment fragment))))
           ((string-equal "disable" action)
-           (unless (= (parse-integer totp) (auth::totp (auth:current)))
+           (unless (= (parse-integer totp) (auth::totp user))
+             (l:warn :radiance.ldap "(~a) TOTP disable for ~s failed: TOTP was ~6,'0d but expected ~6,'0d"
+                     (remote *request*) (user:username user) (parse-integer totp) (auth::totp user))
              (error 'auth::invalid-password))
+           (l:info :radiance.ldap "(~a) Requesting TOTP disable for ~s"
+                   (remote *request*) (user:username user))
            (setf (auth::totp-active-p (auth:current)) NIL)
            (send-email user "email-totp-deactivation.ctml"
                        :settings-url (multiple-value-bind (uri query fragment)
@@ -91,8 +108,14 @@
 (define-api auth/login (username password) ()
   (when (auth:current) (error 'api-error :message "You are already logged in."))
   (let ((user (user:get username)))
-    (unless user (error 'auth::invalid-password))
-    (auth::check-password user password)
+    (unless user
+      (l:warn :radiance.ldap "(~a) Login attempt for user account ~s failed: no such account"
+              (remote *request*) username)
+      (error 'auth::invalid-password))
+    (unless (auth::check-password user password NIL)
+      (l:warn :radiance.ldap "(~a) Login attempt for user account ~s failed: invalid password"
+              (remote *request*) username)
+      (error 'auth::invalid-password))
     (session:start)
     (cond ((auth::totp-active-p user)
            (setf (session:field 'totp-user) user)
@@ -100,6 +123,8 @@
                (redirect #@"auth/login/totp")
                (api-output "OTP")))
           (T
+           (l:info :radiance.ldap "(~a) Login attempt for user account ~s succeeded."
+                   (remote *request*) username)
            (auth:associate user)
            (if (string= "true" (post/get "browser"))
                (redirect-to-landing (if (admin:implementation)
@@ -113,12 +138,18 @@
 
 (define-api auth/change-password (old-password new-password &optional repeat) (:access (perm auth change-password))
   (let ((user (auth:current NIL)))
-    (unless user (error 'api-error :message "You are not logged in."))
+    (unless user
+      (error 'api-error :message "You are not logged in."))
     (unless (<= 8 (length new-password))
       (error 'api-error "Password must be 8 characters or more."))
     (unless (or (not repeat) (string= new-password repeat))
       (error 'api-error "The confirmation does not match the password."))
-    (auth::check-password user old-password)
+    (unless (auth::check-password user old-password NIL)
+      (l:warn :radiance.ldap "(~a) Password change attempt for user account ~s failed: invalid old password"
+              (remote *request*) (user:username user))
+      (error 'auth::invalid-password))
+    (l:info :radiance.ldap "(~a) Changed password for user account ~s"
+            (remote *request*) (user:username user))
     (auth::set-password user new-password)
     (send-email user "email-password-change.ctml"
                 :recovery-url (uri-to-url #@"auth/recover" :representation :external))
@@ -139,6 +170,8 @@
       (error 'api-error :message "Recovery is not possible at this time."))
     (when (auth::recovery-active-p user)
       (error 'api-error :message "A recovery email has already been sent."))
+    (l:info :radiance.ldap "(~a) Requested recovery for user account ~s"
+            (remote *request*) (user:username user))
     (let ((code (auth::create-recovery user)))
       (send-email user "email-account-recovery.ctml"
                   :recovery-url (uri-to-url "/api/auth/recover"
@@ -153,11 +186,20 @@
           (api-output "Recovery email sent.")))))
 
 (define-api auth/recover (username code) ()
-  (when (auth:current) (error 'api-error :message "You are already logged in."))
+  (when (auth:current)
+    (error 'api-error :message "You are already logged in."))
   (let ((user (user:get username)))
     (unless user
+      (l:warn :radiance.ldap "(~a) Recovery attempt for user account ~s failed: no such account"
+              (remote *request*) (user:username user))
       (error 'api-error :message "Invalid username or code."))
-    (let ((new-pw (auth::recover user code)))
+    (let ((new-pw (auth::recover user code NIL)))
+      (unless new-pw
+        (l:warn :radiance.ldap "(~a) Recovery attempt for user account ~s failed: bad recovery code"
+                (remote *request*) (user:username user))
+        (error 'api-error :message "Invalid username or code."))
+      (l:info :radiance.ldap "(~a) Recovering user account ~s"
+              (remote *request*) (user:username user))
       (auth:associate user)
       (if (string= "true" (post/get "browser"))
           (redirect
@@ -178,8 +220,15 @@
 (define-api auth/activate (username code) ()
   (let ((user (user:get username)))
     (unless user
+      (l:warn :radiance.ldap "(~a) Activation attempt for user account ~s failed: no such account"
+              (remote *request*) (user:username user))
       (error 'api-error :message "Invalid username or code."))
-    (user::activate user code)
+    (unless (user::activate user code)
+      (l:warn :radiance.ldap "(~a) Activation attempt for user account ~s failed: bad activation code"
+              (remote *request*) (user:username user))
+      (error 'api-error :message "Invalid username or code."))
+    (l:info :radiance.ldap "(~a) Activating user account ~s"
+            (remote *request*) (user:username user))
     (if (string= "true" (post/get "browser"))
         (redirect
          (if (admin:implementation)
