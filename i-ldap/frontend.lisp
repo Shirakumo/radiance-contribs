@@ -49,6 +49,7 @@
     (l:info :radiance.ldap "(~a) TOTP Login attempt for user account ~s succeeded."
             (remote *request*) (user:username user))
     (auth:associate user)
+    (setf (session:field 'totp-user) NIL)
     (if (string= "true" (post/get "browser"))
         (redirect-to-landing (if (admin:implementation)
                                  (resource :admin :page)
