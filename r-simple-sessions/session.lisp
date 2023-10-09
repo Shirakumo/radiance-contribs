@@ -120,6 +120,22 @@
     (and (< (get-universal-time) (timeout session))
          (gethash (id session) *session-table*))))
 
+(defun session::persist ()
+  (l:info :session "Persisting sessions.")
+  (let ((tmp (environment-module-pathname #.*package* :cache "sessions.tmp")))
+    (ubiquitous:with-local-storage (tmp)
+      (setf (ubiquitous:value :sessions) *session-table*))
+    (rename-file tmp (make-pathname :type "lisp" :defaults tmp))))
+
+(defun session::restore ()
+  (l:info :session "Restoring sessions.")
+  (let ((tmp (environment-module-pathname #.*package* :cache "sessions.lisp")))
+    (ubiquitous:with-local-storage (tmp)
+      (when (ubiquitous:value :sessions)
+        (loop for session being the hash-values of (ubiquitous:value :sessions)
+              do (when (session:active-p session)
+                   (setf (gethash (id session) *session-table*) session)))))))
+
 (defun session::prune ()
   (l:info :session "Pruning dead sessions.")
   (maphash (lambda (uuid session)
@@ -137,7 +153,8 @@
                           (catch 'exit
                             (loop while (cdr *prune-thread*)
                                   do (sleep *prune-interval*)
-                                     (session::prune))))
+                                     (session::prune)
+                                     (session::persist))))
                         :name "Session pruning thread")))
 
 (defun session::stop-prune-thread (&key kill)
@@ -157,8 +174,10 @@
 
 (define-trigger radiance:startup ()
   (unless *prune-thread*
+    (session::restore)
     (session::start-prune-thread)))
 
 (define-trigger radiance:shutdown ()
   (when *prune-thread*
-    (session::stop-prune-thread)))
+    (session::stop-prune-thread)
+    (session::persist)))
