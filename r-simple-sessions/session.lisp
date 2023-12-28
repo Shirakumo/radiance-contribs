@@ -180,7 +180,7 @@
      (ignore-errors (bt:join-thread (car *prune-thread*)))))
   (setf *prune-thread* NIL))
 
-(define-trigger radiance:startup ()
+(define-trigger radiance:startup-done ()
   (unless *prune-thread*
     (handler-case (session::restore)
       (error (e)
