@@ -124,7 +124,15 @@
   (l:info :session "Persisting sessions.")
   (let ((tmp (environment-module-pathname #.*package* :cache "sessions.tmp")))
     (ubiquitous:with-local-storage (tmp)
-      (setf (ubiquitous:value :sessions) *session-table*))
+      (let ((table (make-hash-table :test 'equalp)))
+        (loop for key being the hash-keys of *session-table* using (hash-value session)
+              for copy = (make-instance 'session :id (id session) :timeout (timeout session))
+              do (setf (gethash key table) copy)
+                 ;; Only copy the string or number keys since they don't depend on packages
+                 (loop for key being the hash-keys of (fields session) using (hash-value value)
+                       do (unless (typep value '(or standard-object structure-object))
+                            (setf (gethash key (fields copy)) value))))
+        (setf (ubiquitous:value :sessions) table)))
     (rename-file tmp (make-pathname :type "lisp" :defaults tmp))))
 
 (defun session::restore ()
