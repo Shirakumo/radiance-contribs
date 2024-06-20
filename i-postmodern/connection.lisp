@@ -60,12 +60,12 @@
           (warn 'db:connection-already-open :database database-name)
           (db:disconnect))
         ;; Spec restarts for already open.
-        (let ((host (or (gethash :host conn) "localhost"))
-              (port (or (gethash :port conn) 5432))
-              (user (gethash :user conn))
-              (pass (gethash :pass conn))
-              (ssl (gethash :ssl conn))
-              (db (or (gethash :database conn) (err "No database configured!"))))
+        (let ((host (gethash :host conn "localhost"))
+              (port (gethash :port conn 5432))
+              (user (gethash :user conn "radiance"))
+              (pass (gethash :pass conn NIL))
+              (ssl (gethash :ssl conn NIL))
+              (db (gethash :database conn "radiance")))
           (l:info :database "Connecting ~a ~a~:[~;:*~]@~a:~a/~a~@[ (SSL)~]"
                   database-name user pass host port db ssl)
           (setf *current-setting* (list host port user pass db ssl)
