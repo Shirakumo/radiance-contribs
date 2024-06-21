@@ -216,6 +216,18 @@
      (postmodern:with-logical-transaction ()
        ,@body)))
 
+(defun rdb:sql (sql &rest vars)
+  (let ((sql (with-output-to-string (out)
+               ;; FIXME: this is NOT correct but I don't care atm
+               (loop with count = 1
+                     for char across sql
+                     do (cond ((char= char #\?)
+                               (format out "$~d" count)
+                               (incf count))
+                              (T
+                               (write-char char out)))))))
+    (with-connection
+        (exec-query sql vars (collecting-iterator #'identity)))))
 
 (define-trigger server-start ()
   (db:connect (defaulted-config "radiance" :default)))

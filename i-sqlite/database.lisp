@@ -220,6 +220,8 @@
              (let ((*in-transaction* T))
                (,thunk)))))))
 
+(defun rdb:sql (sql &rest vars)
+  (exec-query query vars (collecting-iterator NIL #'identity)))
 
 (define-trigger server-start ()
   (defaulted-config "test.db" :connections "test")
