@@ -16,6 +16,7 @@
   (multiple-value-bind (response request) (handle-hunchentoot-request request)
     (handle-radiance-response response request)))
 
+#-hunchentoot-no-ssl
 (defclass radiance-ssl-acceptor (radiance-acceptor hunchentoot:ssl-acceptor)
   ())
 
@@ -30,6 +31,9 @@
 
 (defun make-listener (port address ssl-cert ssl-key ssl-pass)
   (if (and ssl-cert ssl-key)
+      #+hunchentoot-no-ssl
+      (error "Can't configure SSL without CL+SSL!")
+      #-hunchentoot-no-ssl
       (make-instance 'radiance-ssl-acceptor
                      :port port :address address
                      :ssl-certificate-file ssl-cert
