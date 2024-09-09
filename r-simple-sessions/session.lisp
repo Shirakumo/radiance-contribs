@@ -184,7 +184,7 @@
   (unless *prune-thread*
     (handler-case (session::restore)
       (error (e)
-        (l:error "Failed to restore sessions: ~a" e)))
+        (l:error :radiance.session "Failed to restore sessions: ~a" e)))
     (session::start-prune-thread)))
 
 (define-trigger radiance:shutdown ()
