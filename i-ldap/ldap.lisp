@@ -109,7 +109,8 @@
         (when errorp (error 'auth::invalid-password)))))
 
 (defun auth::recovery-active-p (user &optional user-code)
-  (activation-code-valid-p (first (ldap:attr-value (user::ensure user) :accountrecovery)) user-code))
+  (let ((code (first (ldap:attr-value (user::ensure user) :accountrecovery))))
+    (when code (activation-code-valid-p code user-code))))
 
 (defun auth::create-recovery (user)
   (with-ldap ()
