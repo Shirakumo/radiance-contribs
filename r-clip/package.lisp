@@ -4,6 +4,7 @@
   (:export
    #:*document*
    #:process
+   #:process*
    #:resolve-uri
    #:with-clip-processing
    #:switch-template))

@@ -9,14 +9,17 @@
                     val)))
 
 (defun process (target &rest fields)
+  (process* target (apply #'clip:make-clipboard fields)))
+
+(defun process* (target clipboard)
   (let ((*package* (find-package "RADIANCE-CLIP")))
-    (apply #'clip:process
-           (etypecase target 
-             ((eql T) *document*)
-             (pathname (plump:parse target))
-             (string (plump:parse target))
-             (plump:node target))
-           fields)))
+    (clip:process*
+     (etypecase target
+       ((eql T) *document*)
+       (pathname (plump:parse target))
+       (string (plump:parse target))
+       (plump:node target))
+     clipboard)))
 
 (defmacro with-clip-processing ((template &optional (content-type "application/xhtml+xml; charset=utf-8")) &body body)
   (let ((result (gensym "RESULT")))
