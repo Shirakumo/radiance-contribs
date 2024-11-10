@@ -15,6 +15,16 @@
 (define-page internal-error "/500" ()
   (error 'internal-error))
 
+(define-trigger user:ready ()
+  (unless (user:get "welcome" :if-does-not-exist NIL)
+    (user:get "welcome" :if-does-not-exist :create)
+    (user:grant "welcome" "*")
+    (format T "~&~%;; Created a default user called \"welcome\"")
+    (when (find-package "R-SIMPLE-AUTH")
+      (auth::set-password "welcome" "welcome")
+      (format T " with the password \"welcome\"."))
+    (format T "~%")))
+
 (format T "~&~%
 ;;;; You are loading R-WELCOME
 ;; This most likely means that this is your first time running
