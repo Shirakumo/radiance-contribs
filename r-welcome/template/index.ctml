@@ -19,6 +19,15 @@
           Next you might want to try out one of the already built modules such as Reader. Simply <code>(ql:quickload :reader)</code> and then visit its page at <a @href="/!/reader/">/!/reader/</a>.
         </p>
       </section>
+      <section id="request">
+        <h2>Request Info</h2>
+        <div class="props">
+          <label>Subdomains</label><span lquery="(text (domains (uri request)))"></span>
+          <label>Domain</label><span lquery="(text (domain request))"></span>
+          <label>Port</label><span lquery="(text (port (uri request)))"></span>
+          <label>Path</label><span lquery="(text (path (uri request)))"></span>
+        </div>
+      </section>
       <section id="system">
         <h2>System</h2>
         <div class="props">

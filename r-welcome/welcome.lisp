@@ -4,7 +4,7 @@
 (in-package #:welcome)
 
 (define-page welcome "/" (:clip "index.ctml")
-  (r-clip:process T))
+  (r-clip:process T :request *request*))
 
 (define-page not-found "/404" ()
   (error 'request-not-found))
