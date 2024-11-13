@@ -87,6 +87,7 @@
               (format-fancy-date stamp))
         (setf (plump:children node) (plump:make-child-array))
         (plump:make-text-node node (ecase format
+                                     (:relative (format-relative-time stamp))
                                      (:year (local-time:format-timestring NIL stamp :format '(:year)
                                                                                     :timezone local-time:+utc-zone+))
                                      (:date (local-time:format-timestring NIL stamp :format '((:year 4) "." (:month 2) "." (:day 2))
