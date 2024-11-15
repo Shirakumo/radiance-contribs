@@ -7,10 +7,8 @@
 (defvar *session-table* (make-hash-table :test 'equalp
                                          #+(or sbcl ecl) :synchronized
                                          #+(or sbcl ecl) T))
-(defvar *session-key* (make-random-string))
 (defvar *session-timeout-format* '((:year 4) #\. (:month 2) #\. (:day 2) #\Space (:hour 2) #\: (:min 2) #\: (:sec 2)))
 (defvar *prune-thread* NIL)
-(defvar *prune-interval* (* 60 60))
 
 (defclass session (session:session)
   ((id :initarg :id :initform (princ-to-string (uuid:make-v4-uuid)) :accessor id)
@@ -23,7 +21,7 @@
     (local-time:format-timestring stream (local-time:universal-to-timestamp (timeout session)) :format *session-timeout-format*)))
 
 (defun make-cookie-value (session)
-  (cryptos:encrypt (format NIL "~a-~a" (id session) (make-random-string (+ 4 (random 9)))) *session-key*))
+  (cryptos:encrypt (format NIL "~a-~a" (id session) (make-random-string (+ 4 (random 9)))) (config :key)))
 
 (defmethod initialize-instance :after ((session session) &key)
   (l:debug :session "Starting session ~a" session)
@@ -32,7 +30,7 @@
 
 (defun decode-session (hash)
   (ignore-errors
-   (let ((hash (cryptos:decrypt hash *session-key*)))
+   (let ((hash (cryptos:decrypt hash (config :key))))
      (when (< 36 (length hash))
        (let ((session (session:get (subseq hash 0 36))))
          (when session
@@ -160,7 +158,7 @@
         (bt:make-thread (lambda ()
                           (catch 'exit
                             (loop while (cdr *prune-thread*)
-                                  do (sleep *prune-interval*)
+                                  do (config :prune-interval)
                                      (session::prune)
                                      (session::persist))))
                         :name "Session pruning thread")))
@@ -179,6 +177,10 @@
                           (lambda () (throw 'exit NIL)))
      (ignore-errors (bt:join-thread (car *prune-thread*)))))
   (setf *prune-thread* NIL))
+
+(define-trigger radiance:startup ()
+  (defaulted-config (make-random-string) :key)
+  (defaulted-config (* 60 60) :prune-interval))
 
 (define-trigger radiance:startup-done ()
   (unless *prune-thread*
