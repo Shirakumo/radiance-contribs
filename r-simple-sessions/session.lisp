@@ -20,6 +20,12 @@
     (format stream "~a " (id session))
     (local-time:format-timestring stream (local-time:universal-to-timestamp (timeout session)) :format *session-timeout-format*)))
 
+(ubiquitous:define-ubiquitous-writer session:session (object)
+  (list (id object)))
+
+(ubiquitous:define-ubiquitous-reader session:session (form)
+  (gethash (first form) *session-table*))
+
 (defun make-cookie-value (session)
   (cryptos:encrypt (format NIL "~a-~a" (id session) (make-random-string (+ 4 (random 9)))) (config :key)))
 
