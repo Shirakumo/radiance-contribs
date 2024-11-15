@@ -134,7 +134,8 @@
               do (setf (gethash key table) copy)
                  ;; Only copy the string or number keys since they don't depend on packages
                  (loop for key being the hash-keys of (fields session) using (hash-value value)
-                       do (unless (typep value '(or standard-object structure-object))
+                       do (unless (typep value '(or standard-object structure-object
+                                                 user:user session:session))
                             (setf (gethash key (fields copy)) value))))
         (setf (ubiquitous:value :sessions) table)))
     (rename-file tmp (make-pathname :type "lisp" :defaults tmp))))
