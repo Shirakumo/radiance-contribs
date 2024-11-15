@@ -17,6 +17,12 @@
   (print-unreadable-object (user stream)
     (format stream "USER ~a" (username user))))
 
+(ubiquitous:define-ubiquitous-writer user:user (object)
+  (list (user:id object)))
+
+(ubiquitous:define-ubiquitous-reader user:user (form)
+  (user:get (first form) :if-does-not-exist :anonymous))
+
 (defmethod initialize-instance :after ((user user) &key username id)
   (setf (gethash username *user-cache*) user)
   (setf (gethash id *user-cache*) user)
