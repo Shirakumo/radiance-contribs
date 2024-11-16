@@ -20,7 +20,7 @@
     (user:get "welcome" :if-does-not-exist :create)
     (user:grant "welcome" "*")
     (format T "~&~%;; Created a default user called \"welcome\"")
-    (when (find-package "R-SIMPLE-AUTH")
+    (when (find-package "SIMPLE-AUTH")
       (auth::set-password "welcome" "welcome")
       (format T " with the password \"welcome\"."))
     (format T "~%")))
