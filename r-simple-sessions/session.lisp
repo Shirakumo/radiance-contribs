@@ -165,7 +165,7 @@
         (bt:make-thread (lambda ()
                           (catch 'exit
                             (loop while (cdr *prune-thread*)
-                                  do (config :prune-interval)
+                                  do (sleep (config :prune-interval))
                                      (session::prune)
                                      (session::persist))))
                         :name "Session pruning thread")))
