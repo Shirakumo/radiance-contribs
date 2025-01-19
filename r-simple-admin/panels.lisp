@@ -51,6 +51,7 @@
                (l:info :simple-admin "Attempting to load system ~a as per front-end request." system)
                (asdf:load-system system)
                (setf info (format NIL "System ~a loaded." system)))
+              #+quicklisp
               ((string-equal action "quickload")
                (l:info :simple-admin "Attempting to quickload system ~a as per front-end request." system)
                (ql:quickload system)
