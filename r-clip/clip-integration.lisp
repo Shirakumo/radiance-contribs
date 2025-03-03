@@ -80,6 +80,7 @@
                      (local-time:timestamp time)
                      ((eql T) (local-time:now))
                      (fixnum (local-time:universal-to-timestamp time))
+                     (real (local-time:universal-to-timestamp (round time)))
                      (string (local-time:parse-timestring time)))))
         (setf (plump:attribute node "datetime")
               (format-machine-date stamp))
