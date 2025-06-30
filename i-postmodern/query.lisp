@@ -56,9 +56,11 @@
        (:AND (format NIL "~{(~a)~^ AND ~}" (mapcar #'compile-form (rest form))))
        (:OR (format NIL "~{(~a)~^ OR ~}" (mapcar #'compile-form (rest form))))
        (:NOT (format NIL "NOT (~a)" (compile-form (second form))))
-       (:FIELD (format NIL "\"~a\"" (string-downcase (second form))))
+       (:FIELD (if (third form)
+                   (format NIL "~(~@[~a~].\"~a\"~)" (second form) (third form))
+                   (format NIL "~(\"~a\"~)" (second form))))
        (:NULL (format NIL "(~a) IS NULL" (compile-form (second form))))
-       (QUOTE (format NIL "\"~a\"" (string-downcase (second form))))
+       (QUOTE (format NIL "~(\"~a\"~)" (second form)))
        (T (push form *vars*)
         (format NIL "$~a" (length *vars*)))))))
 
