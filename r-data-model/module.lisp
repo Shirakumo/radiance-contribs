@@ -7,6 +7,7 @@
    #:data-model
    #:id
    #:collection
+   #:field-table
    #:fields
    #:field
    #:get
