@@ -145,10 +145,10 @@
   (with-collection-existing (collection)
     (with-query ((make-query (case unique
                                ((T NIL) 
-                                (format NIL "SELECT~:[~; DISTINCT~] ~:[*~;~:*~{~/i-postmodern::%field/~^ ~}~] FROM ~a"
+                                (format NIL "SELECT~:[~; DISTINCT~] ~:[*~;~:*~{~/i-postmodern::%field/~^, ~}~] FROM ~a"
                                         unique fields collection))
                                (T
-                                (format NIL "SELECT DISTINCT ON(~{~/i-postmodern::%field/~^, ~}) ~:[*~;~:*~{~/i-postmodern::%field/~^ ~}~] FROM ~a"
+                                (format NIL "SELECT DISTINCT ON(~{~/i-postmodern::%field/~^, ~}) ~:[*~;~:*~{~/i-postmodern::%field/~^, ~}~] FROM ~a"
                                         unique fields collection)))
                              query skip amount sort) query vars)
       (exec-query query vars (if accumulate (collecting-iterator function) (dropping-iterator function))))))
