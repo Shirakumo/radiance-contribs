@@ -8,10 +8,11 @@
 
 (defun %sort-clause (s a c p)
   (declare (ignore c p))
-  (let ((field (first a))
-        (order (second a)))
+  (let* ((field (pop a))
+         (order (pop a))
+         (table (if a (shiftf field order (pop a)))))
     (ecase order (:DESC) (:ASC))
-    (format s "\"~a\" ~a" (string-downcase field) order)))
+    (format s "~(~@[~a.~]\"~a\"~) ~a" table field order)))
 
 (defun make-query (base where skip amount sort)
   (assert (or (null amount) (integerp amount)))
