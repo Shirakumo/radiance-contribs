@@ -6,6 +6,16 @@
     (cl-postgres:prepare-query *current-con* "" query)
     (cl-postgres:exec-prepared *current-con* "" vars row-reader)))
 
+(defun %field (s a c p)
+  (declare (ignore c p))
+  (cond ((not (consp a))
+         (format s "~(~s~)" a))
+        ((second a)
+         (format s "~(~@[~a.~]~s~)"
+                 (first a) (second a)))
+        (T
+         (format s "~(~s~)" (first a)))))
+
 (defun %sort-clause (s a c p)
   (declare (ignore c p))
   (let* ((field (pop a))

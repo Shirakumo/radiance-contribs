@@ -143,8 +143,13 @@
 
 (defun db:iterate (collection query function &key fields skip amount sort accumulate unique)
   (with-collection-existing (collection)
-    (with-query ((make-query (format NIL "SELECT~:[~; DISTINCT~] ~:[*~;~:*~{~s~^ ~}~] FROM ~a"
-                                     unique (mapcar #'string-downcase fields) collection)
+    (with-query ((make-query (case unique
+                               ((T NIL) 
+                                (format NIL "SELECT~:[~; DISTINCT~] ~:[*~;~:*~{~/i-postmodern::%field/~^ ~}~] FROM ~a"
+                                        unique fields collection))
+                               (T
+                                (format NIL "SELECT DISTINCT ON(~{~/i-postmodern::%field/~^, ~}) ~:[*~;~:*~{~/i-postmodern::%field/~^ ~}~] FROM ~a"
+                                        unique fields collection)))
                              query skip amount sort) query vars)
       (exec-query query vars (if accumulate (collecting-iterator function) (dropping-iterator function))))))
 
