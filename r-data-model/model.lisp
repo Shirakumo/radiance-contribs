@@ -43,14 +43,14 @@
       `(setf (gethash (load-time-value (string-downcase ,field)) (field-table ,data-model)) ,value)
       whole))
 
-(defun get (collection query &key (skip 0) amount sort unique (hull collection))
+(defun get (collection query &key (skip 0) amount sort unique (hull collection) fields)
   (db:iterate collection query #'(lambda (ta) (make-instance 'data-model :collection hull :field-table ta :inserted T))
-              :skip skip :amount amount :sort sort :unique unique :accumulate T))
+              :fields fields :skip skip :amount amount :sort sort :unique unique :accumulate T))
 
-(defun get-one (collection query &key (skip 0) sort (hull collection))
+(defun get-one (collection query &key (skip 0) sort (hull collection) fields)
   (db:iterate collection query #'(lambda (ta) (return-from get-one
                                                 (make-instance 'data-model :collection hull :field-table ta :inserted T)))
-              :skip skip :amount 1 :sort sort))
+    :fields fields :skip skip :amount 1 :sort sort))
 
 (defun hull (collection &rest fields) ;; speed up test with extra interface func.
   (unless (db:collection-exists-p collection)
