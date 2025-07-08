@@ -9,12 +9,12 @@
 (defun %field (s a c p)
   (declare (ignore c p))
   (cond ((not (consp a))
-         (format s "~(~s~)" a))
+         (format s "~(~s~)" (string a)))
         ((second a)
          (format s "~(~@[~a.~]~s~)"
-                 (first a) (second a)))
+                 (first a) (string (second a))))
         (T
-         (format s "~(~s~)" (first a)))))
+         (format s "~(~s~)" (string (first a))))))
 
 (defun %sort-clause (s a c p)
   (declare (ignore c p))
