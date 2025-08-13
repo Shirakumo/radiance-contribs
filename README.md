@@ -1,9 +1,4 @@
-## About Radiance-Contribs
-This is a collection of useful helper modules and standard implementations for Radiance interfaces.
+# This repository has [moved](https://shirakumo.org/projects/radiance-contribs)!
+Due to Microsoft's continued enshittification of the platform this repository has been moved to [Codeberg](https://shirakumo.org/projects/radiance-contribs) in August of 2025. It will not receive further updates or patches. **Issues and pull requests will not be looked at here either**, please submit your patches and issue tickets on Codeberg, or send them directly via good old email patches to [shirakumo@tymoon.eu](mailto:shirakumo@tymoon.eu).
 
-Each directory has its own `README.md` that explains what it is and how to configure it.
-
-## External Contributions
-There are other contribs not made by Shirakumo, which are also available:
-
-- [r-djula](https://gitlab.com/jason.melbye/r-djula) for integration with the [Djula](https://mmontone.github.io/djula/) template system.
+Thanks.
